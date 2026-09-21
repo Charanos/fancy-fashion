@@ -1,0 +1,24 @@
+{
+  "name": "@repo/order-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@repo/common": "workspace:*",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*"
+  }
+}
