@@ -226,7 +226,7 @@ const Navbar = () => {
                 >
                   <GlyphCompassLogo size={40} className="mb-0.5" />
                   <span className="font-title text-2xl sm:text-3xl font-normal tracking-tight text-neutral-950 transition group-hover:text-neutral-800">
-                    Roi Stationares
+                    Roi Stationares & Electronics
                   </span>
                   <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400 font-sans">
                     Nairobi • Fine Paper & Archival Goods

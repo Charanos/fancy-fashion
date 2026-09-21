@@ -66,7 +66,7 @@ const Homepage = () => {
       {/* ================================================================ */}
       <section
         className="relative w-full overflow-visible"
-        style={{ paddingTop: "calc(var(--nav-h) + 3rem)" }}
+        style={{ paddingTop: "calc(var(--nav-h) + 5rem)" }}
       >
         {/* Image wrapper: elegantly centered, increased scale, animated */}
         <div
@@ -85,7 +85,7 @@ const Homepage = () => {
             }}
           >
             <Image
-              src="/featured.png"
+              src="/hero2.png"
               alt="Roi Stationares — Fine Stationery & Desk Instruments"
               fill
               priority

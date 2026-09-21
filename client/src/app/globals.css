@@ -35,9 +35,8 @@ h6,
 .font-title,
 .font-display {
   font-family: var(--font-title);
-  letter-spacing: 20px;
   font-feature-settings: "liga" 1, "dlig" 1;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.03em;
 }
 
 * {
