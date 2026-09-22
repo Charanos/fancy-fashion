@@ -2,589 +2,389 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import {
-  GlyphCompassLogo,
-  GlyphHeart,
-  GlyphMenu,
-  GlyphShoppingBag,
-  GlyphUser,
-} from "./AppleGlyphs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import CartDrawer from "./CartDrawer";
+import { IconTruck } from "./icons";
+import ActionCluster from "./navigation/ActionCluster";
+import BrandLockup from "./navigation/BrandLockup";
+import DepartmentBar from "./navigation/DepartmentBar";
+import MobileDrawer from "./navigation/MobileDrawer";
+import SearchPalette from "./navigation/SearchPalette";
+import SearchTrigger from "./navigation/SearchTrigger";
 import {
-  IconArrowRight,
-  IconChevronDown,
-  IconChevronRight,
-  IconLogin2,
-  IconNotebook,
-  IconPalette,
-  IconPaperclip,
-  IconPencil,
-  IconLayoutGrid,
-  IconTruck,
-} from "./icons";
-import Searchbar from "./Searchbar";
+  NAVIGATION_CATEGORIES,
+  STORE_IDENTITY,
+  UTILITY_LINKS,
+} from "./navigation/nav-config";
+import { DUR, EASE, useReducedMotion } from "./navigation/nav-motion";
+import { useHeaderScroll } from "./navigation/useHeaderScroll";
 
-type NavCategory = {
-  label: string;
-  href: string;
-  icon: typeof IconNotebook;
-  featuredTitle: string;
-  featuredDesc: string;
-  items: { name: string; href: string; badge?: string }[];
-};
+type QuickTo = ReturnType<typeof gsap.quickTo>;
 
-const NAVIGATION_CATEGORIES: NavCategory[] = [
-  {
-    label: "Notebooks & Paper",
-    href: "/categories/notebooks",
-    icon: IconNotebook,
-    featuredTitle: "Architectural Grid A5",
-    featuredDesc: "160gsm fountain-pen friendly Japanese milled paper.",
-    items: [
-      { name: "Hardcover Journals", href: "/categories/notebooks/hardcover" },
-      { name: "Daily & Weekly Planners", href: "/categories/notebooks/planners", badge: "2025" },
-      { name: "Grid & Dot Matrix Pads", href: "/categories/notebooks/grid" },
-      { name: "Pocket Memo Notebooks", href: "/categories/notebooks/pocket" },
-      { name: "Archival Refill Inserts", href: "/categories/notebooks/refills" },
-    ],
-  },
-  {
-    label: "Writing Instruments",
-    href: "/categories/writing",
-    icon: IconPencil,
-    featuredTitle: "Raw Brass Rollerball",
-    featuredDesc: "Solid machined brass that patinas gracefully with daily use.",
-    items: [
-      { name: "Fountain Pens & Nibs", href: "/categories/writing/fountain" },
-      { name: "Rollerballs & Gel Pens", href: "/categories/writing/rollerball" },
-      { name: "Drafting Mechanical Pencils", href: "/categories/writing/pencils" },
-      { name: "Bottled Sumi & Shading Inks", href: "/categories/writing/inks" },
-      { name: "Handmade Leather Pen Sleeves", href: "/categories/writing/cases" },
-    ],
-  },
-  {
-    label: "Desk Architecture",
-    href: "/categories/desk",
-    icon: IconPaperclip,
-    featuredTitle: "Boxwood Ruler 30cm",
-    featuredDesc: "Laser-etched metric & imperial gradations with brass edging.",
-    items: [
-      { name: "Solid Brass Clips & Clamps", href: "/categories/desk/clips" },
-      { name: "Drafting Rulers & Triangles", href: "/categories/desk/rulers" },
-      { name: "Heavyweight Desk Organizers", href: "/categories/desk/trays" },
-      { name: "Precision Craft Scissors", href: "/categories/desk/scissors" },
-      { name: "Cast Iron Paperweights", href: "/categories/desk/weights" },
-    ],
-  },
-  {
-    label: "Art & Studio",
-    href: "/categories/art",
-    icon: IconPalette,
-    featuredTitle: "Studio Watercolor Kit",
-    featuredDesc: "Natural mineral pigments in pocket porcelain half-pans.",
-    items: [
-      { name: "Mineral Watercolor Sets", href: "/categories/art/watercolors" },
-      { name: "Traditional Calligraphy Inks", href: "/categories/art/calligraphy" },
-      { name: "Cotton Watercolor Blocks", href: "/categories/art/paper" },
-      { name: "Fine-Tip Technical Fineliners", href: "/categories/art/fineliners" },
-    ],
-  },
-  {
-    label: "Curated Sets",
-    href: "/categories/sets",
-    icon: IconLayoutGrid,
-    featuredTitle: "The Architect's Bundle",
-    featuredDesc: "A complete desk suite: notebook, brass pen, and metric scale.",
-    items: [
-      { name: "The Complete Desk Suite", href: "/categories/sets/desk-suite" },
-      { name: "Calligrapher Starter Box", href: "/categories/sets/calligraphy" },
-      { name: "Curated Studio Gift Boxes", href: "/categories/sets/gift-boxes" },
-      { name: "Wax Seal & Letterwriting Set", href: "/categories/sets/wax-seal" },
-    ],
-  },
-];
-
+/**
+ * Site header.
+ *
+ * Three presentations, one source of truth:
+ *
+ *  • `rail`     — below `lg`, a single always-stable control bar plus a drawer.
+ *  • `expanded` — at `lg`+ and at the top of the document, the three-tier
+ *                 editorial masthead (utility strip, grand lockup, departments).
+ *  • `docked`   — at `lg`+ once scrolled, a floating frosted console.
+ *
+ * Both desktop presentations stay mounted and are cross-faded by GSAP; the
+ * inactive one is `inert` and `visibility: hidden`, so exactly one of them is
+ * ever in the accessibility tree or the tab order. Which presentation shows is
+ * decided by CSS breakpoints rather than a measured viewport, so the first
+ * paint is correct on the server and there is no hydration flash.
+ */
 const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [cartCount] = useState(2);
   const pathname = usePathname();
 
-  // Smart sticky behavior:
-  // - Top of page (scrollY <= 24): Transparent multi-tier grand masthead, blended with hero
-  // - Scrolling down (> 80px): Slides up and hides
-  // - Scrolling up: Slides down as a compact, docked frosted glass console
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [cartCount] = useState(2);
+
+  const headerRef = useRef<HTMLElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const expandedRef = useRef<HTMLDivElement>(null);
+  const dockedRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const headerY = useRef<QuickTo | null>(null);
+  const isFirstModeRun = useRef(true);
+
+  const reduced = useReducedMotion();
+
+  const { mode, isHidden } = useHeaderScroll();
+
+  const openSearch = useCallback(() => setIsSearchOpen(true), []);
+  const closeSearch = useCallback(() => setIsSearchOpen(false), []);
+  const openCart = useCallback(() => setIsCartOpen(true), []);
+
+  // ── Global shortcuts ───────────────────────────────────────────────────────
   useEffect(() => {
-    let prevY = window.scrollY;
-
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-
-      // Resting state at top
-      if (currentY <= 24) {
-        setIsScrolled(false);
-        setIsVisible(true);
-      } else {
-        setIsScrolled(true);
-
-        // Scrolling DOWN -> hide header
-        if (currentY > prevY && currentY > 80) {
-          setIsVisible(false);
-          setActiveDropdown(null);
-        }
-        // Scrolling UP -> reveal compact docked bar
-        else if (currentY < prevY) {
-          setIsVisible(true);
-        }
-      }
-
-      prevY = currentY;
+    const isTypingTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+      return (
+        el.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)
+      );
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-        setActiveDropdown(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen((open) => !open);
+        return;
+      }
+      // "/" is the storefront convention for jump-to-search.
+      if (event.key === "/" && !event.metaKey && !event.ctrlKey && !isTypingTarget(event.target)) {
+        event.preventDefault();
+        setIsSearchOpen(true);
       }
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Close the drawer on navigation and when the viewport grows into the
+  // desktop layouts, where the drawer has no trigger to return focus to.
+  useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      if (query.matches) setIsDrawerOpen(false);
+    };
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  // ── Header reveal / hide ───────────────────────────────────────────────────
+  useGSAP(() => {
+    if (!headerRef.current) return;
+    // quickTo reuses one tween instance, so rapid scroll reversals retarget an
+    // existing animation instead of allocating a new one per flip.
+    headerY.current = gsap.quickTo(headerRef.current, "y", {
+      duration: DUR.slow,
+      ease: EASE.out,
+      overwrite: "auto",
+    });
+  }, []);
+
+  useGSAP(
+    () => {
+      const header = headerRef.current;
+      const setY = headerY.current;
+      if (!header || !setY) return;
+
+      if (!isHidden) {
+        if (reduced) gsap.set(header, { y: 0 });
+        else setY(0);
+        return;
+      }
+
+      // Travel only as far as the visible surface actually needs: the docked
+      // pill is a fraction of the masthead's height, and animating the full
+      // header box would make it crawl off screen.
+      const surface =
+        (mode === "expanded" ? expandedRef.current : dockedRef.current)
+          ?.offsetHeight || railRef.current?.offsetHeight || 96;
+
+      if (reduced) gsap.set(header, { y: -(surface + 24) });
+      else setY(-(surface + 24));
+    },
+    { dependencies: [isHidden, mode, reduced] }
+  );
+
+  // ── Expanded ⇄ docked cross-fade ───────────────────────────────────────────
+  useGSAP(
+    () => {
+      const expanded = expandedRef.current;
+      const docked = dockedRef.current;
+      if (!expanded || !docked) return;
+
+      const incoming = mode === "expanded" ? expanded : docked;
+      const outgoing = mode === "expanded" ? docked : expanded;
+
+      if (isFirstModeRun.current || reduced) {
+        isFirstModeRun.current = false;
+        gsap.set(incoming, { autoAlpha: 1, y: 0 });
+        gsap.set(outgoing, { autoAlpha: 0, y: 0 });
+        return;
+      }
+
+      gsap
+        .timeline({ defaults: { overwrite: "auto" } })
+        .to(
+          outgoing,
+          {
+            autoAlpha: 0,
+            y: mode === "expanded" ? 8 : -8,
+            duration: DUR.fast,
+            ease: EASE.in,
+          },
+          0
+        )
+        .fromTo(
+          incoming,
+          { autoAlpha: 0, y: mode === "expanded" ? -12 : 12 },
+          { autoAlpha: 1, y: 0, duration: DUR.slow, ease: EASE.out },
+          0.05
+        );
+    },
+    { dependencies: [mode, reduced] }
+  );
+
+  // ── Publish the real header height as --nav-h ──────────────────────────────
+  // Page content offsets itself with this token. Measuring the live masthead
+  // keeps the hero aligned when fonts load or the utility strip wraps, and it
+  // deliberately tracks the *expanded* height so docking never shifts layout.
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const publishHeight = () => {
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const surface = isDesktop ? expandedRef.current : railRef.current;
+      const height = surface?.offsetHeight ?? 0;
+      if (height > 0) root.style.setProperty("--nav-h", `${Math.round(height)}px`);
+    };
+
+    publishHeight();
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(publishHeight)
+        : null;
+    if (expandedRef.current) observer?.observe(expandedRef.current);
+    if (railRef.current) observer?.observe(railRef.current);
+    window.addEventListener("resize", publishHeight);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", publishHeight);
+      root.style.removeProperty("--nav-h");
+    };
+  }, []);
+
+  const expandedIsLive = mode === "expanded" && !isHidden;
+  const dockedIsLive = mode === "docked" && !isHidden;
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-300 ease-out ${
-          isVisible ? "translate-y-0" : "-translate-y-full"
-        }`}
-      >
-        {/* ========================================================================= */}
-        {/* MODE A: FULL MULTI-TIER STACK (Rendered before scroll / blended with hero)  */}
-        {/* ========================================================================= */}
-        {!isScrolled && (
-          <div className="w-full bg-transparent transition-all duration-300">
-            {/* TIER 1: Atelier Dispatch & Services Utility Bar */}
-            <div className="border-b border-stone-200/40 bg-transparent py-2">
-              <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 text-xs">
-                {/* Left: Dispatch Notice */}
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-700 font-sans">
-                    <span className="size-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                    Complimentary archival packaging on orders over $120
-                  </span>
-                  <span className="hidden text-neutral-300 sm:inline">•</span>
-                  <span className="hidden items-center gap-1 text-[11px] text-neutral-500 font-sans sm:inline-flex">
-                    <IconTruck className="size-3 text-neutral-400" />
-                    Worldwide atelier dispatch from Nairobi
-                  </span>
-                </div>
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
 
-                {/* Right: Utility Links */}
-                <div className="flex items-center gap-4 text-[11px] font-sans text-neutral-500">
-                  <span className="hidden hover:text-neutral-900 transition sm:inline cursor-pointer">
-                    Showroom: Nairobi
-                  </span>
-                  <span className="hidden text-neutral-300 sm:inline">|</span>
-                  <Link href="/journal" className="hover:text-neutral-900 transition">
-                    Journal
-                  </Link>
-                  <span className="text-neutral-300">|</span>
-                  <span className="font-mono numerals text-neutral-700 font-medium">
-                    USD ($)
-                  </span>
-                </div>
-              </div>
-            </div>
+      <header ref={headerRef} className="site-header" data-mode={mode}>
+        {/* ─── Below lg: one stable control bar, identical at every scroll depth ── */}
+        <div ref={railRef} className="nav-rail lg:hidden">
+          <div className="nav-rail-surface">
+            <BrandLockup variant="mark" wordmark="sm" markSize={30} />
 
-            {/* TIER 2: Grand Atelier Masthead */}
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-              {/* Left Column: Search Trigger */}
-              <div className="flex flex-1 items-center justify-start">
-                <div className="hidden sm:block">
-                  <Searchbar variant="inline" />
-                </div>
-                <div className="sm:hidden">
-                  <Searchbar variant="button" />
-                </div>
-              </div>
+            {/* From sm the field takes the slack; below it the glyph joins the
+                right-hand cluster so the rail reads as brand | actions. */}
+            <SearchTrigger
+              variant="field"
+              onOpen={openSearch}
+              className="hidden min-w-0 flex-1 sm:flex"
+            />
 
-              {/* Center Column: The Crown Jewel (Grand Centered Brand Identity) */}
-              <div className="flex flex-col items-center text-center">
-                <Link
-                  href="/"
-                  className="group flex flex-col items-center gap-1"
-                  aria-label="Roi Stationares Home"
-                >
-                  <GlyphCompassLogo size={40} className="mb-0.5" />
-                  <span className="font-title text-2xl sm:text-3xl font-normal tracking-tight text-neutral-950 transition group-hover:text-neutral-800">
-                    Roi Stationares & Electronics
-                  </span>
-                  <span className="text-[9px] font-medium uppercase tracking-widest text-neutral-400 font-sans">
-                    Nairobi • Fine Paper & Archival Goods
-                  </span>
-                </Link>
-              </div>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <SearchTrigger
+                variant="glyph"
+                onOpen={openSearch}
+                glyphSize={17}
+                className="sm:hidden"
+              />
 
-              {/* Right Column: 3D Apple-Grade Glyph Action Cluster */}
-              <div className="flex flex-1 items-center justify-end gap-2.5">
-                {/* Wishlist Button */}
-                <Link
-                  href="/wishlist"
-                  aria-label="Wishlist"
-                  className="apple-glyph-btn group"
-                >
-                  <GlyphHeart size={18} />
-                </Link>
-
-                {/* Shopping Bag Trigger (Pristine Horizontal Pill) */}
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(true)}
-                  aria-label={`Shopping Bag (${cartCount} items)`}
-                  className="apple-glyph-pill group"
-                >
-                  <GlyphShoppingBag size={18} />
-                  <span className="font-sans text-xs font-medium text-neutral-800 group-hover:text-neutral-950">
-                    Bag
-                  </span>
-                  <span
-                    className="numerals font-mono grid size-4.5 place-items-center rounded-full text-[10px] font-semibold text-white shadow-2xs"
-                    style={{
-                      background: "linear-gradient(180deg, #2b2723 0%, #151310 100%)",
-                      boxShadow: "inset 0 0.8px 0.8px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.25)",
-                    }}
-                  >
-                    {cartCount}
-                  </span>
-                </button>
-
-                {/* Account / Profile Button */}
-                <Link
-                  href="/account"
-                  aria-label="Account profile"
-                  className="apple-glyph-btn group hidden sm:inline-grid"
-                >
-                  <GlyphUser size={18} />
-                </Link>
-
-                {/* Mobile Menu Toggle — wrapper controls lg visibility independently of apple-glyph-btn display */}
-                <span className="lg:hidden">
-                  <button
-                    type="button"
-                    className="apple-glyph-btn group"
-                    aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-                    aria-expanded={isMenuOpen}
-                    aria-controls="mobile-navigation-drawer"
-                    onClick={() => setIsMenuOpen((prev) => !prev)}
-                  >
-                    <GlyphMenu size={18} isOpen={isMenuOpen} />
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            {/* TIER 3: Curated Departmental Navigation Deck (Category Ribbon) */}
-            <div className="border-t border-stone-200/50 bg-transparent py-3">
-              <nav
-                className="mx-auto hidden max-w-7xl items-center justify-center gap-8 xl:gap-12 px-4 sm:px-6 lg:flex lg:px-8"
-                aria-label="Catalogue Departments"
-                onMouseLeave={() => setActiveDropdown(null)}
-              >
-                {NAVIGATION_CATEGORIES.map((category) => {
-                  const isActive = pathname.startsWith(category.href);
-                  const isHovered = activeDropdown === category.label;
-
-                  return (
-                    <div
-                      key={category.label}
-                      className="relative"
-                      onMouseEnter={() => setActiveDropdown(category.label)}
-                    >
-                      <Link
-                        href={category.href}
-                        className={`group relative inline-flex items-center gap-1.5 py-1 text-[13px] font-medium tracking-wide uppercase whitespace-nowrap transition-colors duration-200 ${
-                          isActive
-                            ? "text-neutral-950 font-semibold"
-                            : "text-neutral-600 hover:text-neutral-950"
-                        }`}
-                        aria-expanded={isHovered}
-                      >
-                        <span className="whitespace-nowrap">{category.label}</span>
-                        <IconChevronDown
-                          className={`size-3 text-neutral-400 transition-transform duration-200 ${
-                            isHovered ? "rotate-180 text-neutral-900" : "group-hover:text-neutral-700"
-                          }`}
-                        />
-                        {/* Hover Underline Micro-Indicator */}
-                        <span
-                          className={`absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-neutral-900 transition-all duration-200 ${
-                            isActive || isHovered ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
-                          }`}
-                        />
-                      </Link>
-
-                      {/* Mega-Menu Flyout */}
-                      {isHovered && (
-                        <div className="dropdown-glass-panel absolute left-1/2 top-full mt-2.5 w-96 -translate-x-1/2 rounded-3xl p-4 shadow-2xl animate-in fade-in slide-in-from-top-1.5 duration-200 z-50">
-                          <div className="grid gap-3">
-                            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs">
-                              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-900">
-                                <category.icon className="size-4 text-neutral-700" />
-                                <span className="font-title text-sm tracking-tight">{category.featuredTitle}</span>
-                              </div>
-                              <p className="mt-1 text-xs text-neutral-500 font-sans leading-relaxed">
-                                {category.featuredDesc}
-                              </p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 font-mono">
-                                Curated Lines
-                              </p>
-                              {category.items.map((item) => (
-                                <Link
-                                  key={item.name}
-                                  href={item.href}
-                                  className="group/item flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-neutral-700 transition-all duration-150 hover:bg-white hover:text-neutral-950 hover:shadow-2xs font-sans"
-                                  onClick={() => setActiveDropdown(null)}
-                                >
-                                  <span className="group-hover/item:translate-x-0.5 transition-transform duration-150">{item.name}</span>
-                                  {item.badge ? (
-                                    <span className="rounded-md bg-stone-200/80 px-1.5 py-0.5 font-mono text-[9px] font-medium text-neutral-700">
-                                      {item.badge}
-                                    </span>
-                                  ) : (
-                                    <IconChevronRight className="size-3 text-neutral-300 group-hover/item:text-neutral-700 group-hover/item:translate-x-0.5 transition-all duration-150" />
-                                  )}
-                                </Link>
-                              ))}
-                            </div>
-
-                            <Link
-                              href={category.href}
-                              onClick={() => setActiveDropdown(null)}
-                              className="mt-0.5 flex items-center justify-center gap-1.5 rounded-full border border-stone-300/80 bg-white/95 py-2 text-xs font-medium text-neutral-800 shadow-2xs transition-all duration-150 hover:border-neutral-900 hover:bg-white hover:text-neutral-950 hover:shadow-xs font-sans"
-                            >
-                              <span>Explore Entire Department</span>
-                              <IconArrowRight className="size-3.5" />
-                            </Link>
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  );
-                })}
-              </nav>
+              <ActionCluster
+                cartCount={cartCount}
+                onOpenCart={openCart}
+                onToggleMenu={() => setIsDrawerOpen((open) => !open)}
+                isMenuOpen={isDrawerOpen}
+                menuButtonRef={menuButtonRef}
+                glyphSize={17}
+                showBagLabel={false}
+                showAccount={false}
+                className="gap-1.5 sm:gap-2"
+              />
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ========================================================================= */}
-        {/* MODE B: COMPACT DOCKED CONSOLE (Rendered when scrolling UP)               */}
-        {/* ========================================================================= */}
-        {isScrolled && (
-          <div className="px-3 pt-3 sm:px-6">
-            <div className="nav-docked mx-auto flex max-w-7xl items-center justify-between px-6 py-3 sm:px-8">
-              {/* Left: Compact Brand Mark — Logo glyph only, no text in docked state */}
-              <Link
-                href="/"
-                className="flex shrink-0 items-center group"
-                aria-label="Roi Stationares Home"
-              >
-                <GlyphCompassLogo size={34} />
-              </Link>
-
-              {/* Center: Quick Department Links (No Line Wrapping) */}
-              <nav
-                className="hidden lg:flex items-center gap-8 xl:gap-10"
-                aria-label="Catalogue Departments"
-                onMouseLeave={() => setActiveDropdown(null)}
-              >
-                {NAVIGATION_CATEGORIES.map((category) => {
-                  const isActive = pathname.startsWith(category.href);
-                  const isHovered = activeDropdown === category.label;
-
-                  return (
-                    <div
-                      key={category.label}
-                      className="relative"
-                      onMouseEnter={() => setActiveDropdown(category.label)}
-                    >
-                      <Link
-                        href={category.href}
-                        className={`inline-flex items-center gap-1 py-1 text-xs font-medium tracking-wide uppercase whitespace-nowrap transition-colors ${
-                          isActive ? "text-neutral-950 font-semibold" : "text-neutral-600 hover:text-neutral-950"
-                        }`}
-                      >
-                        <span className="whitespace-nowrap">{category.label}</span>
-                        <IconChevronDown
-                          className={`size-2.5 text-neutral-400 transition-transform ${
-                            isHovered ? "rotate-180 text-neutral-900" : ""
-                          }`}
-                        />
-                      </Link>
-
-                      {/* Dropdown Flyout */}
-                      {isHovered && (
-                        <div className="dropdown-glass-panel absolute left-1/2 top-full mt-2.5 w-80 -translate-x-1/2 rounded-2xl p-3.5 shadow-2xl animate-in fade-in slide-in-from-top-1.5 duration-200 z-50">
-                          <div className="space-y-1">
-                            {category.items.map((item) => (
-                              <Link
-                                key={item.name}
-                                href={item.href}
-                                className="group/item flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-neutral-700 transition-all duration-150 hover:bg-white hover:text-neutral-950 hover:shadow-2xs font-sans"
-                                onClick={() => setActiveDropdown(null)}
-                              >
-                                <span className="group-hover/item:translate-x-0.5 transition-transform duration-150">{item.name}</span>
-                                <IconChevronRight className="size-3 text-neutral-300 group-hover/item:text-neutral-700 group-hover/item:translate-x-0.5 transition-all duration-150" />
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  );
-                })}
-              </nav>
-
-              {/* Right: Actions (Inline Search Hidden - Replaced by Compact 3D Search Button) */}
-              <div className="flex items-center gap-2.5">
-                <Searchbar variant="button" />
-
-                <Link
-                  href="/wishlist"
-                  aria-label="Wishlist"
-                  className="apple-glyph-btn group"
-                >
-                  <GlyphHeart size={17} />
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(true)}
-                  aria-label={`Shopping Bag (${cartCount} items)`}
-                  className="apple-glyph-pill group"
-                >
-                  <GlyphShoppingBag size={17} />
-                  <span className="hidden sm:inline font-sans text-xs font-medium text-neutral-800">
-                    Bag
-                  </span>
-                  <span
-                    className="numerals font-mono grid size-4.5 place-items-center rounded-full text-[10px] font-semibold text-white shadow-2xs"
-                    style={{
-                      background: "linear-gradient(180deg, #2b2723 0%, #151310 100%)",
-                      boxShadow: "inset 0 0.8px 0.8px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.25)",
-                    }}
-                  >
-                    {cartCount}
-                  </span>
-                </button>
-
-                <Link
-                  href="/account"
-                  aria-label="Account profile"
-                  className="apple-glyph-btn group hidden sm:inline-grid"
-                >
-                  <GlyphUser size={17} />
-                </Link>
-
-                <span className="lg:hidden">
-                  <button
-                    type="button"
-                    className="apple-glyph-btn group"
-                    aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-                    aria-expanded={isMenuOpen}
-                    aria-controls="mobile-navigation-drawer"
-                    onClick={() => setIsMenuOpen((prev) => !prev)}
-                  >
-                    <GlyphMenu size={17} isOpen={isMenuOpen} />
-                  </button>
+        {/* ─── lg+ / top of document: three-tier editorial masthead ───────────── */}
+        <div
+          ref={expandedRef}
+          className="nav-panel nav-panel-expanded hidden lg:block"
+          inert={!expandedIsLive}
+        >
+          {/* Tier 1 — dispatch & service strip */}
+          <div className="nav-tier nav-tier-utility">
+            <div className="nav-tier-inner flex items-center justify-between text-xs">
+              <p className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 font-sans text-[11px] font-medium text-neutral-700">
+                  <span className="nav-live-dot" aria-hidden="true" />
+                  {STORE_IDENTITY.deliveryNotice}
                 </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Slide-Over Navigation Drawer */}
-        {isMenuOpen && (
-          <div
-            id="mobile-navigation-drawer"
-            className="fixed inset-0 top-[76px] z-40 flex flex-col bg-[#fdfbf7]/98 p-5 shadow-2xl backdrop-blur-2xl lg:hidden overflow-y-auto"
-          >
-            <div className="mb-4">
-              <Searchbar variant="inline" />
-            </div>
-
-            <div className="flex-1 space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 font-sans">
-                Stationery Departments
+                <span className="hidden text-neutral-300 xl:inline" aria-hidden="true">
+                  •
+                </span>
+                <span className="hidden items-center gap-1 font-sans text-[11px] text-neutral-500 xl:inline-flex">
+                  <IconTruck className="size-3 text-neutral-400" aria-hidden="true" />
+                  {STORE_IDENTITY.deliveryWindow}
+                </span>
               </p>
-              {NAVIGATION_CATEGORIES.map((cat) => (
-                <div
-                  key={cat.label}
-                  className="rounded-2xl border border-stone-200/70 bg-white/70 p-3 shadow-2xs"
-                >
-                  <Link
-                    href={cat.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center justify-between font-title text-base text-neutral-900"
-                  >
-                    <span className="flex items-center gap-2">
-                      <cat.icon className="size-4.5 text-neutral-600" />
-                      {cat.label}
-                    </span>
-                    <IconArrowRight className="size-4 text-stone-400" />
-                  </Link>
-                  <div className="mt-2.5 space-y-1.5 border-t border-stone-200/60 pt-2 text-xs font-sans">
-                    {cat.items.slice(0, 3).map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={() => setIsMenuOpen(false)}
-                        className="block text-neutral-600 hover:text-neutral-950 py-0.5"
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            <div className="mt-6 border-t border-stone-200/80 pt-4 space-y-2">
-              <Link
-                href="/account"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex h-11 items-center justify-center gap-2 rounded-full border border-stone-300 bg-white text-xs font-medium text-neutral-900 shadow-2xs"
-              >
-                <IconLogin2 className="size-4" />
-                <span>Account Sign In</span>
-              </Link>
-              <div className="flex justify-between px-2 pt-2 text-[11px] text-neutral-400 font-sans">
-                <span>Nairobi Atelier & Showroom</span>
-                <span>Customer Care: +254 700 000 000</span>
+              <div className="flex items-center gap-4 font-sans text-[11px] text-neutral-500">
+                {UTILITY_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="transition-colors hover:text-neutral-900"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <span className="text-neutral-300" aria-hidden="true">
+                  |
+                </span>
+                <span className="numerals font-mono font-medium text-neutral-700">
+                  {STORE_IDENTITY.currency}
+                </span>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Tier 2 — grand lockup, flanked by search and actions */}
+          <div className="nav-tier-inner flex items-center justify-between gap-6 py-4">
+            <div className="flex flex-1 items-center justify-start">
+              <SearchTrigger
+                variant="field"
+                onOpen={openSearch}
+                className="w-56 xl:w-72"
+              />
+            </div>
+
+            <BrandLockup variant="grand" />
+
+            <div className="flex flex-1 items-center justify-end">
+              <ActionCluster
+                cartCount={cartCount}
+                onOpenCart={openCart}
+                glyphSize={18}
+              />
+            </div>
+          </div>
+
+          {/* Tier 3 — department ribbon */}
+          <div className="nav-tier nav-tier-departments">
+            <div className="nav-tier-inner flex justify-center">
+              <DepartmentBar
+                categories={NAVIGATION_CATEGORIES}
+                pathname={pathname}
+                variant="ribbon"
+                live={expandedIsLive}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── lg+ / scrolled: floating console ───────────────────────────────── */}
+        <div
+          ref={dockedRef}
+          className="nav-panel nav-panel-docked hidden lg:block"
+          inert={!dockedIsLive}
+        >
+          <div className="nav-docked-inner">
+            <div className="nav-docked">
+              {/* Emblem only when docked — the wordmark belongs to the full
+                  masthead, and dropping it buys the departments real room. */}
+              <BrandLockup variant="mark" wordmark="none" markSize={34} />
+
+              <DepartmentBar
+                categories={NAVIGATION_CATEGORIES}
+                pathname={pathname}
+                variant="compact"
+                live={dockedIsLive}
+                className="mx-6 flex-1 justify-center"
+              />
+
+              <ActionCluster
+                cartCount={cartCount}
+                onOpenCart={openCart}
+                onOpenSearch={openSearch}
+                glyphSize={17}
+              />
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* Slide-over Cart Drawer */}
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
+      {/* One live region for the whole header; the two desktop panels would
+          otherwise announce every bag change twice. */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {cartCount} {cartCount === 1 ? "item" : "items"} in your bag
+      </span>
+
+      <MobileDrawer
+        open={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onOpenSearch={openSearch}
+        categories={NAVIGATION_CATEGORIES}
+        pathname={pathname}
+        triggerRef={menuButtonRef}
       />
+
+      <SearchPalette open={isSearchOpen} onClose={closeSearch} />
+
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
 };

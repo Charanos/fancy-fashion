@@ -21,14 +21,14 @@ const Homepage = () => {
       tl.fromTo(
         heroRef.current,
         { 
-          y: 20, // Reduced from 80
+          y: 12,
           opacity: 0, 
         },
         {
           y: 0,
           opacity: 1,
-          duration: 2.2,
-          ease: "power2.out",
+          duration: 0.82,
+          ease: "power3.out",
         }
       );
 
@@ -37,14 +37,14 @@ const Homepage = () => {
       // 2. Elegant Stagger for below-the-fold content
       tl.fromTo(
         contentRef.current,
-        { y: 20, opacity: 0 },
+        { y: 14, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 1.4,
-          ease: "power2.out",
+          duration: 0.68,
+          ease: "power3.out",
         },
-        "-=1.4" // Overlap seamlessly
+        "-=0.36"
       );
     });
 
@@ -59,14 +59,14 @@ const Homepage = () => {
 
   return (
     <div className="w-full overflow-hidden">
-      <h1 className="sr-only">Roi Stationares — Premium Stationery &amp; Desk Supplies</h1>
+      <h1 className="sr-only">Roi Stationer and Electronics — Nairobi office supplies and electronics</h1>
 
       {/* ================================================================ */}
       {/* HERO — Editorially placed display image                           */}
       {/* ================================================================ */}
       <section
         className="relative w-full overflow-visible"
-        style={{ paddingTop: "calc(var(--nav-h) + 5rem)" }}
+        style={{ paddingTop: "calc(var(--nav-h) + 3rem)" }}
       >
         {/* Image wrapper: elegantly centered, increased scale, animated */}
         <div
@@ -85,8 +85,8 @@ const Homepage = () => {
             }}
           >
             <Image
-              src="/hero2.png"
-              alt="Roi Stationares — Fine Stationery & Desk Instruments"
+              src="/hero4.png"
+              alt="Roi Stationer and Electronics — office supplies and electronics for Nairobi workspaces"
               fill
               priority
               sizes="(max-width: 640px) 94vw, (max-width: 1024px) 90vw, 1150px"

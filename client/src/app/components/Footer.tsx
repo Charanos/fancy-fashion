@@ -13,11 +13,11 @@ import { GlassSurface, IconAction } from "./ui";
 const footerLinks = [
   {
     title: "Shop",
-    links: ["Writing", "Paper goods", "Art supplies", "Desk tools"],
+    links: ["Office & paper", "Print & scan", "Computers & tech", "Workspace & school"],
   },
   {
     title: "Support",
-    links: ["Delivery", "Returns", "Bulk orders", "Contact"],
+    links: ["Nairobi delivery", "Returns", "Bulk orders", "Contact"],
   },
   {
     title: "Company",
@@ -28,7 +28,7 @@ const footerLinks = [
 const contactItems = [
   { icon: IconMapPin, label: "Nairobi, Kenya", numerals: false },
   { icon: IconPhone, label: "+254 700 000 000", numerals: true },
-  { icon: IconMail, label: "hello@roistationares.co.ke", numerals: false },
+  { icon: IconMail, label: "hello@roioffice.co.ke", numerals: false },
 ];
 
 const Footer = () => {
@@ -48,13 +48,12 @@ const Footer = () => {
                 />
               </span>
               <span className="font-title text-xl font-normal tracking-tight text-neutral-950">
-                Roi Stationares
+                Roi Stationer &amp; Electronics
               </span>
             </Link>
 
             <p className="mt-4 text-sm leading-6 text-neutral-600">
-              Polished stationery, desk essentials, and creative supplies for
-              study, work, gifting, and everyday making.
+              Reliable office supplies, print essentials and work-ready technology for Nairobi teams, schools and home workspaces.
             </p>
 
             <div className="mt-6 flex items-center gap-2">
@@ -65,7 +64,7 @@ const Footer = () => {
               />
               <IconAction href="#" label="X" icon={IconBrandX} />
               <IconAction
-                href="mailto:hello@roistationares.co.ke"
+                href="mailto:hello@roioffice.co.ke"
                 label="Email"
                 icon={IconMail}
               />
@@ -113,7 +112,7 @@ const Footer = () => {
 
           <p className="text-sm text-neutral-500">
             © <span className="numerals">{new Date().getFullYear()}</span> Roi
-            Stationares. All rights reserved.
+            Stationer &amp; Electronics. All rights reserved.
           </p>
         </div>
       </GlassSurface>

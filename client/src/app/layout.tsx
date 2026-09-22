@@ -24,13 +24,13 @@ const lekton = Lekton({
 
 export const metadata: Metadata = {
   metadataBase: new URL("http://localhost:3000"),
-  title: "Roi Stationares - The best stationary store",
+  title: "Roi Stationer & Electronics | Nairobi office supplies and electronics",
   description:
-    "Roi Stationares is the best stationary store in the Nairobi area. We offer a wide range of stationary products at affordable prices. Our products are of high quality and we offer excellent customer service.",
-  applicationName: "Roi Stationares",
-  authors: [{ name: "Roi Stationares" }],
-  creator: "Roi Stationares",
-  publisher: "Roi Stationares",
+    "Nairobi office supplies, printers, scanners, laptops and practical workspace equipment. All prices are in Kenyan shillings.",
+  applicationName: "Roi Stationer & Electronics",
+  authors: [{ name: "Roi Stationer & Electronics" }],
+  creator: "Roi Stationer & Electronics",
+  publisher: "Roi Stationer & Electronics",
 };
 
 export default function RootLayout({
@@ -44,11 +44,14 @@ export default function RootLayout({
         className="min-h-dvh text-neutral-950 antialiased selection:bg-neutral-950 selection:text-white"
         suppressHydrationWarning
       >
-        {/* Navbar: fixed, renders above everything at z-40 */}
+        {/* Navbar: fixed, renders above everything at z-40. It also owns the
+            skip link and publishes its measured height as --nav-h. */}
         <Navbar />
         {/* Main content: full-width, no max-w constraint here — individual sections self-manage their layout */}
         <div className="relative flex min-h-dvh flex-col">
-          <main className="flex-1 w-full">{children}</main>
+          <main id="main-content" tabIndex={-1} className="flex-1 w-full">
+            {children}
+          </main>
           <div className="page-bounded">
             <Footer />
           </div>

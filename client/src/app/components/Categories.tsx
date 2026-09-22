@@ -4,11 +4,11 @@ import type { ComponentType } from "react";
 
 import {
   IconNotebook,
-  IconPalette,
+  IconDeviceLaptop,
+  IconKeyboard,
   IconPaperclip,
   IconPencil,
   IconPrinter,
-  IconRulerMeasure,
   IconLayoutGrid,
   type IconProps,
 } from "./icons";
@@ -21,59 +21,64 @@ type Category = {
   icon: ComponentType<IconProps>;
 };
 
+type CategoriesProps = {
+  activeSlug: string;
+  onSelect: (slug: string) => void;
+};
+
 const categories: Category[] = [
   {
     name: "All",
-    description: "Everything in store",
+    description: "Office, print and technology",
     slug: "all",
-    count: 128,
+    count: 8,
     icon: IconLayoutGrid,
   },
   {
-    name: "Writing",
-    description: "Pens, pencils, markers",
-    slug: "writing",
-    count: 34,
+    name: "Office",
+    description: "Paper, writing and filing",
+    slug: "office",
+    count: 1,
     icon: IconPencil,
   },
   {
-    name: "Notebooks",
-    description: "Journals and pads",
-    slug: "notebooks",
-    count: 22,
-    icon: IconNotebook,
+    name: "Print & Scan",
+    description: "Printers, scanners and ink",
+    slug: "print-scan",
+    count: 2,
+    icon: IconPrinter,
   },
   {
-    name: "Art",
-    description: "Paint, brushes, craft",
-    slug: "art",
-    count: 19,
-    icon: IconPalette,
+    name: "Computers",
+    description: "Laptops and tech accessories",
+    slug: "computers",
+    count: 1,
+    icon: IconDeviceLaptop,
   },
   {
-    name: "Desk",
-    description: "Clips, files, storage",
-    slug: "desk",
-    count: 28,
+    name: "Workspace",
+    description: "Organisation and desk tools",
+    slug: "workspace",
+    count: 2,
     icon: IconPaperclip,
   },
   {
-    name: "Tools",
-    description: "Rulers and geometry",
-    slug: "tools",
-    count: 15,
-    icon: IconRulerMeasure,
+    name: "School",
+    description: "Study and project essentials",
+    slug: "school",
+    count: 1,
+    icon: IconPencil,
   },
   {
-    name: "Printing",
-    description: "Paper and ink",
-    slug: "printing",
-    count: 10,
-    icon: IconPrinter,
+    name: "Accessories",
+    description: "Keyboards, mice and cables",
+    slug: "accessories",
+    count: 1,
+    icon: IconKeyboard,
   },
 ];
 
-const Categories = () => {
+const Categories = ({ activeSlug, onSelect }: CategoriesProps) => {
   return (
     <section className="relative my-20 sm:my-28" aria-labelledby="categories-heading">
       {/* ================================================================ */}
@@ -90,7 +95,7 @@ const Categories = () => {
           </h2>
         </div>
         <p className="max-w-sm text-sm leading-relaxed text-neutral-600 md:text-right">
-          Quick paths into the stationery essentials, archival materials, and desk instruments customers reach for most.
+          Quick paths into the office equipment, print essentials and reliable technology Nairobi teams use every day.
         </p>
       </div>
 
@@ -100,15 +105,16 @@ const Categories = () => {
       <div className="relative w-full">
         {/* Native fluid scroll container */}
         <div className="no-scrollbar flex w-full gap-3 sm:gap-6 overflow-x-auto pb-10 pt-4 snap-x snap-mandatory">
-          {categories.map((category, index) => {
+          {categories.map((category) => {
             const Icon = category.icon;
-            const isActive = index === 0;
+            const isActive = activeSlug === category.slug;
 
             return (
               <button
                 key={category.slug}
                 type="button"
                 aria-pressed={isActive}
+                onClick={() => onSelect(category.slug)}
                 className="group relative flex w-[130px] shrink-0 sm:w-44 flex-col items-center gap-5 rounded-[2.5rem] bg-transparent p-2 text-center transition-all duration-400 snap-start hover:-translate-y-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950"
               >
                 {/* 3D Tactile Icon Container */}

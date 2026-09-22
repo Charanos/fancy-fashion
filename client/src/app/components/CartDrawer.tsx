@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "./navigation/useFocusTrap";
+import { useScrollLock } from "./navigation/useScrollLock";
 import {
   IconArrowRight,
   IconMinus,
@@ -32,23 +34,24 @@ interface CartDrawerProps {
 const DEFAULT_SAMPLE_ITEMS: CartItem[] = [
   {
     id: 1,
-    name: "Architectural Grid Notebook A5",
-    category: "Hardcover • Forest Green",
-    price: 34.0,
+    name: "HP Smart Tank 585 All-in-One",
+    category: "Print & Scan • Wireless",
+    price: 31500,
     quantity: 1,
     image: "/products/1g.png",
   },
   {
     id: 2,
-    name: "Brass Rollerball & Nib Kit",
-    category: "Raw Brass • 0.5mm Refillable",
-    price: 58.0,
+    name: "PaperOne A4 Copy Paper, 80gsm",
+    category: "Office & Paper • 500 Sheets",
+    price: 780,
     quantity: 1,
     image: "/products/2g.png",
   },
 ];
 
-const FREE_SHIPPING_THRESHOLD = 120.0;
+const FREE_SHIPPING_THRESHOLD = 5000;
+const formatKsh = (amount: number) => `KSh ${new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 }).format(amount)}`;
 
 export default function CartDrawer({
   isOpen,
@@ -56,6 +59,13 @@ export default function CartDrawer({
   items: initialItems,
 }: CartDrawerProps) {
   const [items, setItems] = useState<CartItem[]>(initialItems || DEFAULT_SAMPLE_ITEMS);
+  const panelRef = useRef<HTMLElement>(null);
+
+  // Shared, reference-counted lock: writing body.style.overflow directly meant
+  // closing the search palette on top of this drawer unlocked the page beneath
+  // it. The focus trap keeps Tab inside the slide-over while it is open.
+  useScrollLock(isOpen);
+  useFocusTrap(isOpen, panelRef);
 
   useEffect(() => {
     if (initialItems) {
@@ -64,23 +74,14 @@ export default function CartDrawer({
   }, [initialItems]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
+      if (e.key === "Escape") onClose();
     };
 
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   const updateQuantity = (id: number | string, delta: number) => {
@@ -128,7 +129,10 @@ export default function CartDrawer({
       />
 
       {/* Slide-over panel */}
-      <aside className="relative flex h-full w-full max-w-md flex-col justify-between border-l border-white/60 bg-[#faf8f5]/95 p-6 shadow-2xl backdrop-blur-2xl transition-transform duration-300 sm:rounded-l-3xl">
+      <aside
+        ref={panelRef}
+        className="relative flex h-full w-full max-w-md flex-col justify-between border-l border-white/60 bg-[#faf8f5]/95 p-6 shadow-2xl backdrop-blur-2xl transition-transform duration-300 sm:rounded-l-3xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-200/70 pb-4">
           <div className="flex items-center gap-2">
@@ -137,7 +141,7 @@ export default function CartDrawer({
             </span>
             <div>
               <h2 className="font-title text-xl font-normal text-neutral-950">
-                Your Stationery Bag
+                Your Shopping Bag
               </h2>
               <p className="text-xs text-neutral-500 font-sans">
                 {items.length} {items.length === 1 ? "item" : "items"} selected
@@ -162,13 +166,13 @@ export default function CartDrawer({
               <span>
                 Add{" "}
                 <span className="font-mono numerals font-semibold">
-                  ${remainingForFreeShipping.toFixed(2)}
+                  {formatKsh(remainingForFreeShipping)}
                 </span>{" "}
-                more for complimentary archival shipping
+                more for free Nairobi delivery
               </span>
             ) : (
               <span className="text-emerald-800 font-medium">
-                You have unlocked free express archival shipping!
+                Free Nairobi delivery is unlocked!
               </span>
             )}
           </div>
@@ -191,15 +195,14 @@ export default function CartDrawer({
                 Your basket is currently empty
               </h3>
               <p className="mt-1 text-xs text-neutral-500 max-w-xs font-sans">
-                Explore our archival notebooks, refillable pens, and desk
-                instruments.
+                Explore practical office supplies, print equipment and work-ready technology.
               </p>
               <button
                 type="button"
                 onClick={onClose}
                 className="mt-5 inline-flex items-center gap-2 rounded-full bg-neutral-950 px-5 py-2.5 text-xs font-medium text-white transition hover:bg-neutral-800"
               >
-                Browse Curated Goods
+                Browse Nairobi essentials
                 <IconArrowRight className="size-3.5" />
               </button>
             </div>
@@ -250,7 +253,7 @@ export default function CartDrawer({
 
                     <div className="text-right">
                       <span className="font-mono numerals text-xs font-semibold text-neutral-950">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatKsh(item.price * item.quantity)}
                       </span>
                     </div>
                   </div>
@@ -276,19 +279,19 @@ export default function CartDrawer({
               <div className="flex justify-between text-neutral-600 font-sans">
                 <span>Subtotal</span>
                 <span className="font-mono numerals text-neutral-950 font-medium">
-                  ${subtotal.toFixed(2)}
+                  {formatKsh(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between text-neutral-600 font-sans">
                 <span>Packaging & Handling</span>
                 <span className="text-emerald-700 font-medium font-sans">
-                  {remainingForFreeShipping === 0 ? "Complimentary" : "Calculated next"}
+                  {remainingForFreeShipping === 0 ? "Free in Nairobi" : "Calculated at checkout"}
                 </span>
               </div>
               <div className="flex justify-between border-t border-stone-200/60 pt-2 text-sm font-semibold text-neutral-950">
                 <span>Estimated Total</span>
                 <span className="font-mono numerals text-base">
-                  ${subtotal.toFixed(2)}
+                  {formatKsh(subtotal)}
                 </span>
               </div>
             </div>
@@ -304,7 +307,7 @@ export default function CartDrawer({
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-neutral-500">
               <IconShieldCheck className="size-3.5 text-neutral-400" stroke={1.8} />
-              <span>Secure checkout • 30-day archival satisfaction</span>
+              <span>Secure checkout • Nairobi delivery confirmation</span>
             </div>
           </div>
         )}
