@@ -1064,12 +1064,38 @@ canvas {
     border-bottom: 1px solid rgba(214, 208, 197, 0.55);
   }
 
+  .section-title-block {
+    max-width: 36rem;
+    min-width: 0;
+  }
+
   @media (min-width: 768px) {
     .section-header {
       flex-direction: row;
       align-items: flex-end;
       justify-content: space-between;
       gap: 2.5rem;
+    }
+
+    /* Mirrored variant: the lede leads and the title lands on the right, so
+       consecutive sections alternate instead of stacking the same way twice.
+       `row-reverse` does it visually while the heading stays first in the DOM,
+       which keeps the document outline and tab order correct. */
+    .section-header[data-align="end"] {
+      flex-direction: row-reverse;
+    }
+
+    .section-header[data-align="end"] .section-title-block {
+      text-align: right;
+    }
+
+    .section-header[data-align="end"] .section-eyebrow {
+      flex-direction: row-reverse;
+      justify-content: flex-start;
+    }
+
+    .section-header[data-align="end"] .section-lede {
+      text-align: left;
     }
   }
 
@@ -1152,18 +1178,36 @@ canvas {
       background 280ms ease;
   }
 
+  /* Elevation is built from several light, wide layers rather than one tight
+     dark one. A single high-alpha shadow reads as a hard blob sitting under
+     the pill; a ramp reads as the pill lifting off the paper. */
   .category-tile:hover {
     transform: translateY(-2px);
     border-color: rgba(178, 170, 156, 0.9);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 1),
-      0 10px 22px -12px rgba(35, 30, 22, 0.3);
+      0 1px 2px rgba(35, 30, 22, 0.05),
+      0 8px 16px -10px rgba(35, 30, 22, 0.16),
+      0 18px 34px -20px rgba(35, 30, 22, 0.18);
   }
 
   .category-tile[data-active="true"] {
     border-color: #17140f;
     background: linear-gradient(180deg, #23201a, #12100d);
-    box-shadow: 0 12px 26px -14px rgba(20, 18, 14, 0.7);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 1px 2px rgba(20, 18, 14, 0.14),
+      0 8px 18px -12px rgba(20, 18, 14, 0.26),
+      0 20px 40px -24px rgba(20, 18, 14, 0.28);
+  }
+
+  .category-tile[data-active="true"]:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 2px 4px rgba(20, 18, 14, 0.16),
+      0 12px 24px -14px rgba(20, 18, 14, 0.3),
+      0 26px 48px -26px rgba(20, 18, 14, 0.32);
   }
 
   .category-tile-mark {
@@ -1510,12 +1554,16 @@ canvas {
   .product-card-stock[data-level="out"] .product-stock-dot,
   .product-row-stock[data-level="out"] .product-stock-dot { background: #9f1239; }
 
+  /* Spacing is set per element rather than with one flex `gap`, because the
+     card has a deliberate rhythm: the eyebrow belongs to the name, the rating
+     belongs to the name, and the spec table is a separate block that wants a
+     real break above it. */
   .product-card-body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 0.3rem;
-    padding-inline: 0.2rem;
+    gap: 0;
+    padding-inline: 0.25rem;
   }
 
   .product-card-eyebrow {
@@ -1529,6 +1577,7 @@ canvas {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #a39b8f;
+    margin-bottom: 0.4rem;
   }
 
   .product-card-brand { color: #6b6459; white-space: nowrap; }
@@ -1537,10 +1586,13 @@ canvas {
     font-family: var(--font-title);
     font-size: 1rem;
     font-weight: 400;
-    line-height: 1.25;
+    line-height: 1.3;
     letter-spacing: 0;
     color: #12100d;
+    margin-bottom: 0.45rem;
   }
+
+  .product-card-body .product-rating { margin-bottom: 0.55rem; }
 
   /* The name is the card's hit target; the quick actions sit above it. */
   .product-card-link::after {
@@ -1550,21 +1602,25 @@ canvas {
     border-radius: inherit;
   }
 
+  /* `margin-bottom: auto` absorbs the leftover height, which pins the spec
+     table to the bottom of the body. Spec tables then line up across a row
+     even when one product's name wraps onto a second line. */
   .product-card-summary {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: auto;
     font-family: var(--font-body);
     font-size: 0.75rem;
-    line-height: 1.55;
+    line-height: 1.6;
     color: #6b6459;
   }
 
   .product-card-specs {
     display: grid;
-    gap: 0.2rem;
-    margin-top: 0.4rem;
+    gap: 0.3rem;
+    margin-top: 0.9rem;
   }
 
   .product-spec {
@@ -1599,12 +1655,13 @@ canvas {
 
   .product-card-foot {
     display: grid;
-    gap: 0.6rem;
-    padding: 0.7rem 0.2rem 0;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    padding: 0.85rem 0.25rem 0;
     border-top: 1px solid rgba(214, 208, 197, 0.5);
   }
 
-  .product-card-price { display: grid; gap: 0.1rem; }
+  .product-card-price { display: grid; gap: 0.2rem; }
 
   .product-price-row {
     display: flex;
@@ -1738,8 +1795,8 @@ canvas {
     position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 1rem;
-    padding: 0.9rem;
+    gap: 1.1rem;
+    padding: 1.1rem;
     border-radius: 1.35rem;
     border: 1px solid rgba(255, 255, 255, 0.9);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(252, 250, 245, 0.72));
@@ -1761,12 +1818,21 @@ canvas {
   @media (min-width: 900px) {
     .product-row {
       grid-template-columns: auto minmax(0, 1fr) minmax(12rem, auto);
-      gap: 1.35rem;
+      gap: 1.5rem;
+      padding: 1.25rem 1.35rem;
       align-items: start;
     }
   }
 
   .product-row-media { position: relative; }
+
+  /* The row's plate is larger than the cart's: it has the height to carry it,
+     and a 72px mark looked lost beside a 200px row. */
+  .product-row-media .product-plate-panel {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 1rem;
+  }
 
   .product-row-media .product-flag {
     position: absolute;
@@ -1775,14 +1841,19 @@ canvas {
     translate: -50% 0;
   }
 
-  .product-row-main { display: grid; gap: 0.35rem; min-width: 0; }
+  /* Same rhythm as the grid card: eyebrow tight to the name, metadata tight
+     under it, then a real break before the summary and the spec table. */
+  .product-row-main { display: grid; gap: 0; min-width: 0; }
+
+  .product-row-main .product-card-eyebrow { margin-bottom: 0.35rem; }
 
   .product-row-name {
     font-family: var(--font-title);
     font-size: 1.0625rem;
     font-weight: 400;
-    line-height: 1.25;
+    line-height: 1.3;
     color: #12100d;
+    margin-bottom: 0.4rem;
   }
 
   .product-row-meta {
@@ -1790,6 +1861,7 @@ canvas {
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
+    margin-bottom: 0.6rem;
   }
 
   .product-row-stock {
@@ -1803,17 +1875,20 @@ canvas {
   }
 
   .product-row-summary {
+    max-width: 58ch;
     font-family: var(--font-body);
     font-size: 0.8125rem;
-    line-height: 1.6;
+    line-height: 1.65;
     color: #6b6459;
   }
 
+  /* Capped hard. Left to fill the row's main column the dotted leaders ran
+     600px wide, which turned a compact spec table into a stretched ledger. */
   .product-row-specs {
     display: grid;
-    gap: 0.2rem;
-    margin-top: 0.35rem;
-    max-width: 30rem;
+    gap: 0.3rem;
+    margin-top: 0.85rem;
+    max-width: 22rem;
   }
 
   .product-row-side {
@@ -2282,4 +2357,387 @@ canvas {
   }
 
   .bulk-band-cta:active { transform: translateY(0); }
+}
+
+/* ========================================================================= */
+/* SITE FOOTER                                                               */
+/* ========================================================================= */
+
+@layer components {
+  .site-footer {
+    padding-block: 1rem 2rem;
+  }
+
+  .footer-shell {
+    position: relative;
+    overflow: hidden;
+    padding: 2rem 1.5rem 1.5rem;
+    border-radius: 1.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    background:
+      radial-gradient(90% 120% at 8% 0%, rgba(255, 255, 255, 0.85), transparent 58%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(250, 247, 241, 0.58) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(35, 30, 22, 0.03),
+      0 22px 44px -28px rgba(35, 30, 22, 0.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.15);
+    backdrop-filter: blur(24px) saturate(1.15);
+  }
+
+  @media (min-width: 768px) {
+    .footer-shell { padding: 2.75rem 2.5rem 1.75rem; }
+  }
+
+  .footer-top {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .footer-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* The brand column leads, three link columns follow, the visit card closes.
+     Below xl the visit card drops under the links rather than squeezing them. */
+  @media (min-width: 1100px) {
+    .footer-top {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.7fr) minmax(0, 0.95fr);
+      gap: 3rem;
+    }
+  }
+
+  /* ── Brand column ───────────────────────────────────────────────────── */
+  .footer-brand { min-width: 0; }
+
+  .footer-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .footer-lockup-name {
+    display: block;
+    font-family: var(--font-title);
+    font-size: 1.0625rem;
+    line-height: 1.2;
+    color: #12100d;
+    transition: color 200ms ease;
+  }
+
+  .footer-lockup:hover .footer-lockup-name { color: #000000; }
+
+  .footer-lockup-tag {
+    display: block;
+    margin-top: 0.15rem;
+    font-family: var(--font-body);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a39b8f;
+  }
+
+  .footer-blurb {
+    max-width: 34ch;
+    margin-top: 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    color: #6b6459;
+  }
+
+  .footer-contact {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1.25rem;
+  }
+
+  .footer-contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: #4a453e;
+    transition: color 180ms ease;
+  }
+
+  .footer-contact-link svg { color: #a39b8f; transition: color 180ms ease; }
+  .footer-contact-link:not(.is-static):hover { color: #12100d; }
+  .footer-contact-link:not(.is-static):hover svg { color: #12100d; }
+  .footer-contact-link.is-static { cursor: default; }
+
+  .footer-social {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 1.35rem;
+  }
+
+  .footer-social-link {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(221, 215, 204, 0.85);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 240, 232, 0.8));
+    color: #56514a;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(35, 30, 22, 0.05);
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      color 200ms ease,
+      border-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .footer-social-link:hover {
+    transform: translateY(-2px);
+    color: #12100d;
+    border-color: rgba(178, 170, 156, 0.95);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 8px 16px -10px rgba(35, 30, 22, 0.28);
+  }
+
+  /* ── Link columns ───────────────────────────────────────────────────── */
+  .footer-nav {
+    display: grid;
+    gap: 2rem;
+    min-width: 0;
+  }
+
+  @media (min-width: 480px) {
+    .footer-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+  }
+
+  .footer-column { min-width: 0; }
+
+  .footer-column-title {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8a8377;
+  }
+
+  .footer-links {
+    display: grid;
+    gap: 0.1rem;
+    margin-top: 0.85rem;
+  }
+
+  .footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.85rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: #5f594f;
+    transition: color 180ms ease;
+  }
+
+  /* The chevron is collapsed to zero width until hover, so the link slides
+     rather than the row reflowing. */
+  .footer-link-mark {
+    width: 0;
+    height: 0.75rem;
+    flex: 0 0 auto;
+    opacity: 0;
+    color: #a39b8f;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .footer-link:hover { color: #12100d; }
+  .footer-link:hover .footer-link-mark { width: 0.75rem; opacity: 1; }
+
+  /* ── Visit card ─────────────────────────────────────────────────────── */
+  .footer-visit {
+    min-width: 0;
+    padding: 1.15rem 1.25rem 1.25rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(221, 215, 204, 0.8);
+    background: rgba(255, 255, 255, 0.62);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  @media (min-width: 640px) and (max-width: 1099px) {
+    .footer-visit { grid-column: 1 / -1; }
+  }
+
+  .footer-hours {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.85rem;
+  }
+
+  .footer-hours-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.3rem;
+    border-top: 1px dashed rgba(197, 190, 177, 0.6);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+  }
+
+  .footer-hours-row:first-child { border-top: 0; padding-top: 0; }
+  .footer-hours-row dt { color: #7a7368; }
+  .footer-hours-row dd { font-weight: 600; color: #3c372f; }
+
+  .footer-visit-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    line-height: 1.55;
+    color: #7a7368;
+  }
+
+  .footer-visit-note svg { margin-top: 0.1rem; color: #a39b8f; }
+
+  .footer-visit-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1.1rem;
+    min-height: 2.4rem;
+    padding-inline: 1rem;
+    border-radius: 9999px;
+    border: 1px solid #17140f;
+    background: linear-gradient(180deg, #2a251f 0%, #12100d 100%);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fdfbf7;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 6px 14px -8px rgba(20, 18, 14, 0.6);
+    transition: filter 200ms ease, transform 200ms ease;
+  }
+
+  .footer-visit-cta:hover { filter: brightness(1.16); transform: translateY(-1px); }
+  .footer-visit-cta:active { transform: translateY(0); }
+
+  /* ── Payments ───────────────────────────────────────────────────────── */
+  .footer-payments {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    margin-top: 2.25rem;
+    padding-top: 1.35rem;
+    border-top: 1px solid rgba(214, 208, 197, 0.55);
+  }
+
+  .footer-payments-label {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a39b8f;
+  }
+
+  .footer-payments-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .footer-payment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(221, 215, 204, 0.85);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1);
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #4a453e;
+    white-space: nowrap;
+  }
+
+  .footer-payment svg { color: #8a8377; }
+
+  /* ── Legal ──────────────────────────────────────────────────────────── */
+  .footer-legal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 1.35rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba(214, 208, 197, 0.55);
+  }
+
+  @media (min-width: 900px) {
+    .footer-legal {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+  }
+
+  .footer-copyright {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    color: #8a8377;
+  }
+
+  .footer-legal-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+
+  .footer-legal-link {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    color: #7a7368;
+    transition: color 180ms ease;
+  }
+
+  .footer-legal-link:hover { color: #12100d; }
+
+  .footer-legal-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.6875rem;
+    color: #8a8377;
+  }
+
+  .footer-top-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(221, 215, 204, 0.85);
+    background: rgba(255, 255, 255, 0.72);
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #4a453e;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1);
+    transition: color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  }
+
+  .footer-top-link:hover {
+    color: #12100d;
+    border-color: rgba(178, 170, 156, 0.95);
+    transform: translateY(-1px);
+  }
 }

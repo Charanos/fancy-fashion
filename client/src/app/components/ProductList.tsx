@@ -76,8 +76,10 @@ const ProductList = () => {
       <Categories activeId={department} onSelect={setDepartment} />
 
       <section aria-labelledby="catalogue-heading" className="scroll-mt-32" id="catalogue">
-        <div className="section-header">
-          <div className="max-w-2xl">
+        {/* Mirrored against the ribbon above it, so the two headers alternate
+            rather than stacking the same shape twice. */}
+        <div className="section-header" data-align="end">
+          <div className="section-title-block">
             <p className="section-eyebrow">
               <span className="section-eyebrow-rule" aria-hidden="true" />
               Catalogue

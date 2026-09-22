@@ -75,7 +75,7 @@ const Categories = ({ activeId, onSelect }: CategoriesProps) => {
   return (
     <section className="relative my-16 sm:my-20" aria-labelledby="categories-heading">
       <div className="section-header">
-        <div className="max-w-2xl">
+        <div className="section-title-block">
           <p className="section-eyebrow">
             <span className="section-eyebrow-rule" aria-hidden="true" />
             Browse

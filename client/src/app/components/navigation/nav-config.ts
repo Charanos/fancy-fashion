@@ -124,7 +124,19 @@ export const STORE_IDENTITY = {
   name: "Roi Stationer & Electronics",
   shortName: "Roi Stationer",
   tagline: "Nairobi • Office supplies & electronics",
+  blurb:
+    "Office supplies, print essentials and work-ready technology for Nairobi teams, schools and home workspaces — stocked locally and priced in shillings.",
   phone: "+254 700 000 000",
+  /** Digits only, for tel: and wa.me links. */
+  phoneDigits: "254700000000",
+  email: "hello@roioffice.co.ke",
+  street: "Biashara Street",
+  city: "Nairobi, Kenya",
+  hours: [
+    { days: "Mon – Fri", time: "8:30 – 18:00" },
+    { days: "Saturday", time: "9:00 – 16:00" },
+    { days: "Sunday", time: "Closed" },
+  ],
   currency: "KSh (KES)",
   deliveryNotice: "Free Nairobi delivery on orders over KSh 5,000",
   deliveryWindow: "Nairobi delivery, Monday to Saturday",
