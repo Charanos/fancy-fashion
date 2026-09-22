@@ -106,6 +106,11 @@ type CartContextValue = {
   setQuantity: (product: CatalogueProduct, quantity: number) => void;
   removeItem: (productId: number) => void;
   clear: () => void;
+  /** Drawer visibility lives here so any page can open the bag, not just the
+      header that happens to render it. */
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -140,6 +145,7 @@ function readStoredLines(): CartLine[] {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, { lines: [] });
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // The server has no basket, so restoring happens after mount. Rendering an
   // empty cart first and filling it in is deliberate: it keeps the server and
@@ -177,6 +183,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => dispatch({ type: "clear" }), []);
+  const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   const value = useMemo<CartContextValue>(() => {
     const items = state.lines.flatMap((line): CartItem[] => {
@@ -206,8 +214,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setQuantity,
       removeItem,
       clear,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
     };
-  }, [state.lines, isHydrated, addItem, setQuantity, removeItem, clear]);
+  }, [
+    state.lines,
+    isHydrated,
+    addItem,
+    setQuantity,
+    removeItem,
+    clear,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+  ]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

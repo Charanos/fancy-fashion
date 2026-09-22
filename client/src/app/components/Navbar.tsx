@@ -43,12 +43,17 @@ type QuickTo = ReturnType<typeof gsap.quickTo>;
 const Navbar = () => {
   const pathname = usePathname();
 
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // The badge reflects the real basket now, not a hardcoded 2.
-  const { count: cartCount } = useCart();
+  // The badge reflects the real basket now, not a hardcoded 2. Drawer
+  // visibility lives in the store too, so a product page can open the bag.
+  const {
+    count: cartCount,
+    isDrawerOpen: isCartOpen,
+    openDrawer: openCart,
+    closeDrawer: closeCart,
+  } = useCart();
 
   const headerRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
@@ -64,7 +69,6 @@ const Navbar = () => {
 
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
-  const openCart = useCallback(() => setIsCartOpen(true), []);
 
   // ── Global shortcuts ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -387,7 +391,7 @@ const Navbar = () => {
 
       <SearchPalette open={isSearchOpen} onClose={closeSearch} />
 
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <CartDrawer isOpen={isCartOpen} onClose={closeCart} />
     </>
   );
 };

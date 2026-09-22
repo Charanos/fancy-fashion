@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Categories from "./Categories";
@@ -10,12 +11,19 @@ import ProductCard from "./products/ProductCard";
 import ProductRow from "./products/ProductRow";
 import ProductToolbar, { type ViewMode } from "./products/ProductToolbar";
 import {
+  DEPARTMENT_FACETS,
   PRODUCTS,
   departmentLabel,
   sortProducts,
   type DepartmentSlug,
   type SortId,
 } from "./products/product-catalog";
+
+/** Only accept a department the catalogue actually has. */
+function parseDepartment(value: string | null): DepartmentSlug | "all" {
+  const match = DEPARTMENT_FACETS.find((facet) => facet.id === value);
+  return match ? (match.id as DepartmentSlug | "all") : "all";
+}
 
 /**
  * Owns the browse state for the homepage catalogue: department, sort order and
@@ -24,7 +32,13 @@ import {
  * rather than being redeclared here as it was before.
  */
 const ProductList = () => {
-  const [department, setDepartment] = useState<DepartmentSlug | "all">("all");
+  // Read once, as the initial value: after that the control is the user's, and
+  // re-syncing from the URL would fight their clicks. This is what makes the
+  // detail page's breadcrumb land on a filtered grid.
+  const searchParams = useSearchParams();
+  const [department, setDepartment] = useState<DepartmentSlug | "all">(() =>
+    parseDepartment(searchParams.get("department"))
+  );
   const [sort, setSort] = useState<SortId>("featured");
   const [view, setView] = useState<ViewMode>("grid");
 

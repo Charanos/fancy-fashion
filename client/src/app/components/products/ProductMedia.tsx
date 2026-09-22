@@ -1,13 +1,47 @@
 "use client";
 
-import type { CatalogueProduct } from "./product-catalog";
+import {
+  IconCalculator,
+  IconDeviceLaptop,
+  IconHighlight,
+  IconKeyboard,
+  IconLayoutGrid,
+  IconNotebook,
+  IconPackage,
+  IconPaperclip,
+  IconPencil,
+  IconPrinter,
+  IconScan,
+} from "../icons";
+import type { NavIcon } from "../navigation/nav-config";
+import type { CatalogueProduct, ProductGlyph } from "./product-catalog";
+
+/**
+ * The catalogue stores a glyph *key*; the component lives here. A product
+ * object is passed from the server-rendered detail page into client
+ * components, and React cannot serialise a function across that boundary — so
+ * the mapping has to happen on this side of it.
+ */
+const GLYPHS: Record<ProductGlyph, NavIcon> = {
+  printer: IconPrinter,
+  scanner: IconScan,
+  package: IconPackage,
+  laptop: IconDeviceLaptop,
+  keyboard: IconKeyboard,
+  notebook: IconNotebook,
+  paperclip: IconPaperclip,
+  pencil: IconPencil,
+  highlight: IconHighlight,
+  grid: IconLayoutGrid,
+  calculator: IconCalculator,
+};
 
 type ProductMediaProps = {
   product: CatalogueProduct;
   /**
-   * `plate` — full specimen panel for the grid card.
-   * `panel` — wider, shorter panel for the list row.
-   * `chip`  — small square for the cart drawer and search results.
+   * `plate` — full specimen panel for the grid card and detail page.
+   * `panel` — wider, shorter panel for the list row and cart line.
+   * `chip`  — small square for the tightest contexts.
    */
   size?: "plate" | "panel" | "chip";
   className?: string;
@@ -30,15 +64,15 @@ const GLYPH_SIZE = {
  * product's line mark. It matches the hero sketch and the compass emblem, so
  * it reads as a deliberate house style rather than a missing asset.
  *
- * One component for the card, the row, the cart and the search palette, so the
- * treatment cannot drift between them.
+ * One component for the card, the row, the detail page, the cart and the
+ * search palette, so the treatment cannot drift between them.
  */
 export default function ProductMedia({
   product,
   size = "plate",
   className = "",
 }: ProductMediaProps) {
-  const Glyph = product.glyph;
+  const Glyph = GLYPHS[product.glyph];
 
   return (
     <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -90,8 +90,13 @@ const Homepage = () => {
       {/* ================================================================ */}
       {/* CATALOGUE — departments, controls and results                     */}
       {/* ================================================================ */}
+      {/* Suspense boundary: ProductList reads `?department=` with
+          useSearchParams, and without it this page would opt out of static
+          rendering entirely. */}
       <div className="page-bounded pb-14 sm:pb-16 lg:pb-20">
-        <ProductList />
+        <Suspense fallback={<div className="min-h-[60vh]" aria-hidden="true" />}>
+          <ProductList />
+        </Suspense>
       </div>
 
       {/* ================================================================ */}

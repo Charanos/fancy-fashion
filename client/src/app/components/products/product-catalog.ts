@@ -1,16 +1,4 @@
-import {
-  IconCalculator,
-  IconDeviceLaptop,
-  IconHighlight,
-  IconKeyboard,
-  IconLayoutGrid,
-  IconNotebook,
-  IconPackage,
-  IconPaperclip,
-  IconPencil,
-  IconPrinter,
-  IconScan,
-} from "../icons";
+import { IconLayoutGrid } from "../icons";
 import { NAVIGATION_CATEGORIES } from "../navigation/nav-config";
 import type { DepartmentId, NavIcon } from "../navigation/nav-config";
 
@@ -21,6 +9,20 @@ import type { DepartmentId, NavIcon } from "../navigation/nav-config";
  * the grid and the category ribbon's counts were hand-maintained fiction.
  */
 export type DepartmentSlug = DepartmentId;
+
+/** The line marks a product can be drawn with. */
+export type ProductGlyph =
+  | "printer"
+  | "scanner"
+  | "package"
+  | "laptop"
+  | "keyboard"
+  | "notebook"
+  | "paperclip"
+  | "pencil"
+  | "highlight"
+  | "grid"
+  | "calculator";
 
 export type ProductSpec = {
   label: string;
@@ -47,8 +49,13 @@ export type CatalogueProduct = {
   /** Units on hand; drives the stock pill and the low-stock nudge. */
   stock: number;
   badges: string[];
-  /** Line-art mark used on the specimen plate in place of a photograph. */
-  glyph: NavIcon;
+  /**
+   * Key for the line-art mark on the specimen plate, resolved to a component
+   * by ProductMedia. It is a string, not the component itself: a product
+   * object crosses the server → client boundary on the detail page, and React
+   * cannot serialise a function.
+   */
+  glyph: ProductGlyph;
   accent: "graphite" | "brass" | "sage" | "clay";
 };
 
@@ -75,7 +82,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 128,
     stock: 7,
     badges: ["Bestseller"],
-    glyph: IconPrinter,
+    glyph: "printer",
     accent: "graphite",
   },
   {
@@ -97,7 +104,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 54,
     stock: 12,
     badges: ["Staff pick"],
-    glyph: IconScan,
+    glyph: "scanner",
     accent: "graphite",
   },
   {
@@ -119,7 +126,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 41,
     stock: 24,
     badges: ["Genuine"],
-    glyph: IconPackage,
+    glyph: "package",
     accent: "brass",
   },
   {
@@ -142,7 +149,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 76,
     stock: 4,
     badges: ["Business"],
-    glyph: IconDeviceLaptop,
+    glyph: "laptop",
     accent: "graphite",
   },
   {
@@ -164,7 +171,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 203,
     stock: 31,
     badges: ["Work ready"],
-    glyph: IconKeyboard,
+    glyph: "keyboard",
     accent: "graphite",
   },
   {
@@ -187,7 +194,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 312,
     stock: 180,
     badges: ["Everyday value"],
-    glyph: IconNotebook,
+    glyph: "notebook",
     accent: "sage",
   },
   {
@@ -210,7 +217,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 38,
     stock: 46,
     badges: [],
-    glyph: IconPaperclip,
+    glyph: "paperclip",
     accent: "clay",
   },
   {
@@ -234,7 +241,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 156,
     stock: 92,
     badges: ["Bulk buy"],
-    glyph: IconPencil,
+    glyph: "pencil",
     accent: "graphite",
   },
   {
@@ -257,7 +264,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 64,
     stock: 3,
     badges: [],
-    glyph: IconHighlight,
+    glyph: "highlight",
     accent: "brass",
   },
   {
@@ -279,7 +286,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 47,
     stock: 18,
     badges: ["Desk essential"],
-    glyph: IconLayoutGrid,
+    glyph: "grid",
     accent: "sage",
   },
   {
@@ -301,7 +308,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 29,
     stock: 6,
     badges: ["Office security"],
-    glyph: IconPackage,
+    glyph: "package",
     accent: "graphite",
   },
   {
@@ -324,7 +331,7 @@ export const PRODUCTS: CatalogueProduct[] = [
     reviewCount: 418,
     stock: 27,
     badges: ["School term ready"],
-    glyph: IconCalculator,
+    glyph: "calculator",
     accent: "clay",
   },
 ];
@@ -440,4 +447,27 @@ export function sortProducts(
     default:
       return sorted;
   }
+}
+
+/* ── Lookups ─────────────────────────────────────────────────────────────── */
+
+export const getProductBySlug = (slug: string): CatalogueProduct | undefined =>
+  PRODUCTS.find((product) => product.slug === slug);
+
+/**
+ * Same department first, then the rest of the catalogue, so a thin department
+ * still fills the related rail instead of rendering one lonely card.
+ */
+export function getRelatedProducts(
+  product: CatalogueProduct,
+  limit = 4
+): CatalogueProduct[] {
+  const others = PRODUCTS.filter((candidate) => candidate.id !== product.id);
+  const sameDepartment = others.filter(
+    (candidate) => candidate.department === product.department
+  );
+  const rest = others.filter(
+    (candidate) => candidate.department !== product.department
+  );
+  return [...sameDepartment, ...rest].slice(0, limit);
 }
