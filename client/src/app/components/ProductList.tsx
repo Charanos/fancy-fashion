@@ -1,40 +1,151 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ProductType } from "@/types";
+import { useMemo, useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import Categories from "./Categories";
-import ProductCard from "./ProductCard";
+import { IconPackage } from "./icons";
+import { DUR, EASE, useReducedMotion } from "./navigation/nav-motion";
+import ProductCard from "./products/ProductCard";
+import ProductRow from "./products/ProductRow";
+import ProductToolbar, { type ViewMode } from "./products/ProductToolbar";
+import {
+  PRODUCTS,
+  departmentLabel,
+  sortProducts,
+  type DepartmentSlug,
+  type SortId,
+} from "./products/product-catalog";
 
-// Catalogue content is intentionally local-first: prices are in Kenyan shillings
-// and the mix reflects a practical Nairobi office, school and home-workspace shop.
-type CatalogueProduct = ProductType & { department: string };
-
-const products: CatalogueProduct[] = [
-  { id: 1, department: "print-scan", name: "HP Smart Tank 585 All-in-One", shortDescription: "Print, copy and scan with low running costs for busy Nairobi workspaces.", description: "Wireless print, copy and scan for home offices and small teams.", price: 31500, sizes: ["Standard"], colors: ["graphite"], images: { graphite: "/products/1g.png" } },
-  { id: 2, department: "print-scan", name: "Epson Perfection V39II Scanner", shortDescription: "A slim A4 flatbed scanner for clear documents, IDs and project work.", description: "Compact document scanning with a simple USB-powered setup.", price: 18900, sizes: ["A4"], colors: ["black"], images: { black: "/products/2g.png" } },
-  { id: 3, department: "computers", name: "Lenovo V15 Gen 4 Laptop", shortDescription: "A dependable 15.6-inch laptop for business, classes and everyday admin.", description: "Work-ready performance with a full-size screen and essential ports.", price: 68500, sizes: ["15.6 inch"], colors: ["iron grey"], images: { graphite: "/products/3gr.png" } },
-  { id: 4, department: "accessories", name: "Logitech MK270 Wireless Combo", shortDescription: "A full-size keyboard and mouse pairing with reliable everyday range.", description: "Comfortable wireless input for desks at home, school or the office.", price: 4950, sizes: ["Full size"], colors: ["black"], images: { black: "/products/4w.png" } },
-  { id: 5, department: "office", name: "PaperOne A4 Copy Paper, 80gsm", shortDescription: "500 bright-white sheets for smooth everyday printing and copying.", description: "Consistent A4 paper for reports, invoices, schoolwork and documents.", price: 780, sizes: ["500 sheets"], colors: ["white"], images: { white: "/products/5r.png" } },
-  { id: 6, department: "workspace", name: "Mesh Desk Organiser Set", shortDescription: "Five coordinated pieces to keep papers, pens and small tools in order.", description: "A practical metal desk set for focused, clutter-free workspaces.", price: 3250, sizes: ["5 piece"], colors: ["black"], images: { black: "/products/6g.png" } },
-  { id: 7, department: "workspace", name: "Fellowes LX25 Paper Shredder", shortDescription: "Compact cross-cut protection for sensitive home and office documents.", description: "A desk-friendly solution for safer disposal of confidential papers.", price: 14200, sizes: ["8 sheet"], colors: ["black"], images: { black: "/products/7g.png" } },
-  { id: 8, department: "school", name: "Student Essentials Starter Kit", shortDescription: "Exercise books, pens, pencils and geometry basics in one useful kit.", description: "A straightforward foundation for a new school term or project work.", price: 1650, sizes: ["Starter set"], colors: ["assorted"], images: { assorted: "/products/8b.png" } },
-];
-
-const formatKsh = (price: number) => `KSh ${new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 }).format(price)}`;
-
+/**
+ * Owns the browse state for the homepage catalogue: department, sort order and
+ * layout. The catalogue itself lives in `products/product-catalog.ts`, so the
+ * data is shared with the cart, the search palette and the category ribbon
+ * rather than being redeclared here as it was before.
+ */
 const ProductList = () => {
-  const [activeDepartment, setActiveDepartment] = useState("all");
-  const visibleProducts = useMemo(() => activeDepartment === "all" ? products : products.filter((product) => product.department === activeDepartment), [activeDepartment]);
-  return <div className="w-full">
-    <Categories activeSlug={activeDepartment} onSelect={setActiveDepartment} />
-    <div className="mb-6 flex items-end justify-between gap-4">
-      <div><p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Nairobi essentials</p><h2 className="font-title text-2xl font-normal tracking-tight text-neutral-950 sm:text-3xl">{activeDepartment === "all" ? "Featured collection" : "Selected essentials"}</h2></div>
-      <p className="hidden max-w-sm text-right text-sm text-neutral-600 sm:block"><span className="numerals">{visibleProducts.length}</span> items shown · Prices in KSh.</p>
+  const [department, setDepartment] = useState<DepartmentSlug | "all">("all");
+  const [sort, setSort] = useState<SortId>("featured");
+  const [view, setView] = useState<ViewMode>("grid");
+
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+
+  const visibleProducts = useMemo(() => {
+    const filtered =
+      department === "all"
+        ? PRODUCTS
+        : PRODUCTS.filter((product) => product.department === department);
+    return sortProducts(filtered, sort);
+  }, [department, sort]);
+
+  // Results rise in whenever the set changes. `fromTo` writes the from-state in
+  // a layout effect, so there is no flash — and if the script never runs, the
+  // cards are simply visible.
+  useGSAP(
+    () => {
+      const container = resultsRef.current;
+      if (!container) return;
+
+      const items = container.querySelectorAll("[data-product-item]");
+      if (items.length === 0) return;
+
+      if (reduced) {
+        gsap.set(items, { autoAlpha: 1, y: 0 });
+        return;
+      }
+
+      gsap.fromTo(
+        items,
+        { autoAlpha: 0, y: 20 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: DUR.slow,
+          ease: EASE.out,
+          stagger: 0.04,
+          overwrite: "auto",
+        }
+      );
+    },
+    { dependencies: [department, sort, view, reduced] }
+  );
+
+  return (
+    <div className="w-full">
+      <Categories activeId={department} onSelect={setDepartment} />
+
+      <section aria-labelledby="catalogue-heading" className="scroll-mt-32" id="catalogue">
+        <div className="section-header">
+          <div className="max-w-2xl">
+            <p className="section-eyebrow">
+              <span className="section-eyebrow-rule" aria-hidden="true" />
+              Catalogue
+            </p>
+            <h2 id="catalogue-heading" className="section-title">
+              {department === "all"
+                ? "Everything in stock"
+                : departmentLabel(department)}
+            </h2>
+          </div>
+          <p className="section-lede">
+            Stocked in Nairobi and priced in shillings. Specifications are the
+            manufacturer&rsquo;s; delivery is free on orders over KSh 5,000.
+          </p>
+        </div>
+
+        <ProductToolbar
+          resultCount={visibleProducts.length}
+          totalCount={PRODUCTS.length}
+          department={department}
+          onClearDepartment={() => setDepartment("all")}
+          sort={sort}
+          onSortChange={setSort}
+          view={view}
+          onViewChange={setView}
+        />
+
+        {visibleProducts.length === 0 ? (
+          <div className="product-empty">
+            <span className="product-empty-mark">
+              <IconPackage className="size-7" stroke={1.3} aria-hidden="true" />
+            </span>
+            <p className="font-title text-lg text-neutral-900">
+              Nothing in this department yet
+            </p>
+            <p className="mx-auto mt-1 max-w-sm font-sans text-sm leading-relaxed text-neutral-500">
+              We are still building this shelf. Browse the full catalogue in the
+              meantime.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDepartment("all")}
+              className="mega-cta mt-5 inline-flex px-5"
+            >
+              Show all departments
+            </button>
+          </div>
+        ) : (
+          <div
+            ref={resultsRef}
+            className={view === "grid" ? "product-grid" : "product-list"}
+          >
+            {visibleProducts.map((product) =>
+              view === "grid" ? (
+                <div key={product.id} data-product-item>
+                  <ProductCard product={product} />
+                </div>
+              ) : (
+                <div key={product.id} data-product-item>
+                  <ProductRow product={product} />
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </section>
     </div>
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {visibleProducts.map((product) => <ProductCard key={product.id} product={product} formatPrice={formatKsh} />)}
-    </div>
-  </div>;
+  );
 };
 
 export default ProductList;

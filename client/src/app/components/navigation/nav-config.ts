@@ -15,9 +15,21 @@ export type NavLink = {
   badge?: string;
 };
 
+/**
+ * The five departments, as a closed union. Products declare their department
+ * with this type, so a typo in the catalogue is a compile error rather than a
+ * silently empty filter.
+ */
+export type DepartmentId =
+  | "office-paper"
+  | "writing-supplies"
+  | "print-scan"
+  | "computers-tech"
+  | "workspace-school";
+
 export type NavCategory = {
   /** Stable key used for dropdown state, ids and GSAP lookups. */
-  id: string;
+  id: DepartmentId;
   label: string;
   /** Condensed label for the docked console, where horizontal room is scarce.
       Always a prefix of `label` so the accessible name still contains the

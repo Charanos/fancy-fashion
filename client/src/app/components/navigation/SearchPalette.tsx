@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -21,21 +20,18 @@ import {
   IconScan,
   IconX,
 } from "../icons";
+import ProductMedia from "../products/ProductMedia";
+import {
+  DEPARTMENT_FACETS,
+  PRODUCTS,
+  departmentLabel,
+  formatKsh,
+  type CatalogueProduct,
+} from "../products/product-catalog";
 import { DUR, EASE, useReducedMotion } from "./nav-motion";
 import { STORE_IDENTITY } from "./nav-config";
 import { useFocusTrap } from "./useFocusTrap";
 import { useScrollLock } from "./useScrollLock";
-
-interface SearchProduct {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  image: string;
-  material: string;
-  badge?: string;
-  keywords: string[];
-}
 
 interface CuratedFilter {
   id: string;
@@ -43,89 +39,6 @@ interface CuratedFilter {
   query: string;
   icon: (props: { size?: number; className?: string }) => React.JSX.Element;
 }
-
-const SAMPLE_SEARCH_CATALOG: SearchProduct[] = [
-  {
-    id: 1,
-    name: "HP Smart Tank 585 All-in-One",
-    category: "Print & Scan",
-    price: 31500,
-    image: "/logo.png",
-    material: "Wireless print, copy & scan",
-    badge: "Bestseller",
-    keywords: ["printer", "print", "copy", "scan", "hp", "ink"],
-  },
-  {
-    id: 2,
-    name: "Epson Perfection V39II Scanner",
-    category: "Print & Scan",
-    price: 18900,
-    image: "/logo.png",
-    material: "Slim A4 document scanning",
-    badge: "Staff Pick",
-    keywords: ["scanner", "scan", "document", "epson", "a4"],
-  },
-  {
-    id: 3,
-    name: "Lenovo V15 Gen 4 Laptop",
-    category: "Computers & Tech",
-    price: 68500,
-    image: "/logo.png",
-    material: "15.6-inch business laptop",
-    badge: "Precision",
-    keywords: ["laptop", "lenovo", "computer", "business", "tech"],
-  },
-  {
-    id: 4,
-    name: "Logitech MK270 Wireless Combo",
-    category: "Computers & Tech",
-    price: 4950,
-    image: "/logo.png",
-    material: "Wireless keyboard & mouse",
-    badge: "Work ready",
-    keywords: ["keyboard", "mouse", "logitech", "wireless", "accessories"],
-  },
-  {
-    id: 5,
-    name: "PaperOne A4 Copy Paper, 80gsm",
-    category: "Office & Paper",
-    price: 780,
-    image: "/logo.png",
-    material: "500 sheets · bright white",
-    badge: "Everyday value",
-    keywords: ["copy paper", "a4", "paper", "office", "printing"],
-  },
-  {
-    id: 6,
-    name: "Mesh Desk Organiser Set",
-    category: "Workspace & School",
-    price: 3250,
-    image: "/logo.png",
-    material: "Five-piece desktop organisation",
-    badge: "Desk essential",
-    keywords: ["desk", "organiser", "workspace", "office", "storage"],
-  },
-  {
-    id: 7,
-    name: "Fellowes LX25 Paper Shredder",
-    category: "Workspace & School",
-    price: 14200,
-    image: "/logo.png",
-    material: "Compact cross-cut document protection",
-    badge: "Office security",
-    keywords: ["shredder", "paper", "security", "workspace", "office"],
-  },
-  {
-    id: 8,
-    name: "Student Essentials Starter Kit",
-    category: "Workspace & School",
-    price: 1650,
-    image: "/logo.png",
-    material: "Exercise books, pens, pencils & geometry basics",
-    badge: "School term ready",
-    keywords: ["school", "student", "kit", "exercise", "pens"],
-  },
-];
 
 const CURATED_BADGES: CuratedFilter[] = [
   {
@@ -154,7 +67,7 @@ const CURATED_BADGES: CuratedFilter[] = [
   },
   {
     id: "paper",
-    label: "Copy Paper",
+    label: "Copy paper",
     query: "Copy Paper",
     icon: ({ size = 11, className = "" }) => (
       <IconNotebook className={className} size={size} stroke={2} />
@@ -169,48 +82,39 @@ const CURATED_BADGES: CuratedFilter[] = [
     ),
   },
   {
-    id: "school",
-    label: "School Kit",
-    query: "Student",
+    id: "toner",
+    label: "Ink & toner",
+    query: "Toner",
     icon: ({ size = 11, className = "" }) => (
       <IconLayoutGrid className={className} size={size} stroke={2} />
     ),
   },
 ];
 
-const DEPARTMENTS = [
-  {
-    name: "Office & Paper",
-    tag: "Paper",
-    icon: IconNotebook,
-    description: "Copy paper, files, forms and notebooks",
-    count: "31 Items",
-  },
-  {
-    name: "Print & Scan",
-    tag: "Printer",
-    icon: IconPrinter,
-    description: "Printers, scanners, ink and toner",
-    count: "18 Items",
-  },
-  {
-    name: "Computers & Tech",
-    tag: "Laptop",
-    icon: IconDeviceLaptop,
-    description: "Laptops, peripherals and power essentials",
-    count: "14 Items",
-  },
-  {
-    name: "Workspace & School",
-    tag: "Desk",
-    icon: IconKeyboard,
-    description: "Organisation, school and desk essentials",
-    count: "33 Items",
-  },
-];
+/** Departments, minus the "all" facet, which has no meaning as a query. */
+const SEARCH_DEPARTMENTS = DEPARTMENT_FACETS.filter((facet) => facet.id !== "all");
 
-const formatKsh = (amount: number) =>
-  `KSh ${new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 }).format(amount)}`;
+/**
+ * Searchable text per product, built once at module scope. It includes brand,
+ * SKU, specs and department, so "80gsm", "PO-A4-80" and "print" all find the
+ * right shelf.
+ */
+const SEARCH_INDEX = new Map<number, string>(
+  PRODUCTS.map((product) => [
+    product.id,
+    [
+      product.name,
+      product.brand,
+      product.sku,
+      product.shortDescription,
+      departmentLabel(product.department),
+      ...product.badges,
+      ...product.specs.map((spec) => `${spec.label} ${spec.value}`),
+    ]
+      .join(" ")
+      .toLowerCase(),
+  ])
+);
 
 type SearchPaletteProps = {
   open: boolean;
@@ -222,6 +126,9 @@ type SearchPaletteProps = {
  * to be bundled with its trigger, which meant every header state mounted its own
  * copy — and every copy registered its own ⌘K listener, so one keypress opened
  * several stacked modals. Splitting trigger from palette fixes that at the root.
+ *
+ * It also carried a second, divergent copy of the product list; it now searches
+ * the one catalogue the cards and the basket share.
  */
 export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
   const router = useRouter();
@@ -279,16 +186,15 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
   }, [open]);
 
   // Memoised so the keyboard handler below is not rebuilt on every render.
-  const filteredResults = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) return [];
-    return SAMPLE_SEARCH_CATALOG.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        item.material.toLowerCase().includes(q) ||
-        item.keywords.some((k) => k.toLowerCase().includes(q))
-    );
+  const filteredResults = useMemo<CatalogueProduct[]>(() => {
+    const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return [];
+    // Every term must match, so "hp printer" narrows the list rather than
+    // widening it the way the previous single-substring test did.
+    return PRODUCTS.filter((product) => {
+      const haystack = SEARCH_INDEX.get(product.id) ?? "";
+      return terms.every((term) => haystack.includes(term));
+    });
   }, [query]);
 
   const activeIndex =
@@ -326,7 +232,7 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
         const target = filteredResults[activeIndex];
         if (!target) return;
         event.preventDefault();
-        router.push(`/products/${target.id}`);
+        router.push(`/products/${target.slug}`);
         onClose();
       }
     };
@@ -435,7 +341,7 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
               setQuery(event.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Search printers, laptops, paper, ink and supplies…"
+            placeholder="Search by product, brand, SKU or spec…"
             autoComplete="off"
             spellCheck="false"
             enterKeyHint="search"
@@ -560,14 +466,14 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {DEPARTMENTS.map((dept) => {
-                    const IconComponent = dept.icon;
+                  {SEARCH_DEPARTMENTS.map((facet) => {
+                    const IconComponent = facet.icon;
                     return (
                       <button
-                        key={dept.name}
+                        key={facet.id}
                         type="button"
                         onClick={() => {
-                          setQuery(dept.tag);
+                          setQuery(facet.shortLabel);
                           setSelectedIndex(0);
                           inputRef.current?.focus();
                         }}
@@ -579,15 +485,15 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
                           </span>
                           <span className="min-w-0">
                             <span className="block truncate font-title text-sm font-medium text-stone-900">
-                              {dept.name}
+                              {facet.label}
                             </span>
                             <span className="block truncate font-sans text-[11px] text-stone-500">
-                              {dept.description}
+                              {facet.description}
                             </span>
                           </span>
                         </span>
-                        <span className="ml-2 shrink-0 font-mono text-[10px] text-stone-400 group-hover:text-stone-700">
-                          {dept.count}
+                        <span className="numerals ml-2 shrink-0 font-mono text-[10px] text-stone-400 group-hover:text-stone-700">
+                          {facet.count} items
                         </span>
                       </button>
                     );
@@ -605,42 +511,34 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {SAMPLE_SEARCH_CATALOG.slice(0, 3).map((item) => (
+                  {PRODUCTS.slice(0, 3).map((product) => (
                     <Link
-                      key={item.id}
-                      href={`/products/${item.id}`}
+                      key={product.id}
+                      href={`/products/${product.slug}`}
                       onClick={onClose}
                       className="group flex items-center justify-between rounded-2xl border border-transparent bg-white/50 p-2.5 transition-all hover:border-stone-200 hover:bg-white hover:shadow-xs"
                     >
                       <span className="flex min-w-0 items-center gap-3.5">
-                        <span className="relative block size-12 shrink-0 overflow-hidden rounded-xl border border-stone-200/80 bg-stone-50">
-                          <Image
-                            src={item.image}
-                            alt=""
-                            fill
-                            sizes="48px"
-                            className="object-contain p-1.5 transition-transform duration-200 group-hover:scale-105"
-                          />
-                        </span>
+                        <ProductMedia product={product} size="panel" />
                         <span className="min-w-0">
                           <span className="flex items-center gap-2">
                             <span className="truncate font-title text-sm font-medium text-stone-900">
-                              {item.name}
+                              {product.name}
                             </span>
-                            {item.badge && (
-                              <span className="inline-flex shrink-0 rounded-full bg-stone-100 px-2 font-mono text-[9.5px] font-medium text-stone-600">
-                                {item.badge}
+                            {product.badges[0] && (
+                              <span className="inline-flex shrink-0 rounded-full bg-stone-100 px-2 py-px font-mono text-[9.5px] font-medium text-stone-600">
+                                {product.badges[0]}
                               </span>
                             )}
                           </span>
                           <span className="block truncate font-sans text-xs text-stone-500">
-                            {item.material}
+                            {product.brand} · {product.specs[0].value}
                           </span>
                         </span>
                       </span>
                       <span className="ml-3 flex shrink-0 items-center gap-3">
                         <span className="numerals font-mono text-xs font-semibold text-stone-900">
-                          {formatKsh(item.price)}
+                          {formatKsh(product.price)}
                         </span>
                         <IconArrowUpRight className="size-4 text-stone-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-stone-900" />
                       </span>
@@ -659,7 +557,7 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
               </p>
               <p className="mx-auto mt-1 max-w-sm font-sans text-xs leading-relaxed text-stone-500">
                 We could not find a product matching &ldquo;{query}&rdquo;. Try{" "}
-                <em>printer</em>, <em>laptop</em>, <em>paper</em>, or <em>scanner</em>.
+                <em>printer</em>, <em>laptop</em>, <em>80gsm</em>, or <em>toner</em>.
               </p>
               <button
                 type="button"
@@ -683,15 +581,15 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
                 </p>
               </div>
 
-              {filteredResults.map((item, index) => {
+              {filteredResults.map((product, index) => {
                 const isSelected = index === activeIndex;
                 return (
                   <Link
-                    key={item.id}
+                    key={product.id}
                     id={optionId(index)}
                     role="option"
                     aria-selected={isSelected}
-                    href={`/products/${item.id}`}
+                    href={`/products/${product.slug}`}
                     onClick={onClose}
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={`group flex items-center justify-between rounded-2xl p-2.5 transition-all duration-150 ${
@@ -701,34 +599,24 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3.5">
-                      <span className="relative block size-12 shrink-0 overflow-hidden rounded-xl border border-stone-200/80 bg-stone-50">
-                        <Image
-                          src={item.image}
-                          alt=""
-                          fill
-                          sizes="48px"
-                          className="object-contain p-1.5 transition-transform duration-200 group-hover:scale-105"
-                        />
-                      </span>
+                      <ProductMedia product={product} size="panel" />
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
                           <span className="truncate font-title text-sm font-medium text-stone-900">
-                            {item.name}
+                            {product.name}
                           </span>
-                          {item.badge && (
-                            <span className="hidden shrink-0 rounded-full bg-stone-100 px-2 font-mono text-[9px] font-medium text-stone-600 sm:inline-flex">
-                              {item.badge}
-                            </span>
-                          )}
+                          <span className="numerals hidden shrink-0 rounded-full bg-stone-100 px-2 py-px font-mono text-[9px] font-medium text-stone-600 sm:inline-flex">
+                            {product.sku}
+                          </span>
                         </span>
                         <span className="block truncate font-sans text-xs text-stone-500">
-                          {item.category} • {item.material}
+                          {departmentLabel(product.department)} · {product.specs[0].value}
                         </span>
                       </span>
                     </span>
                     <span className="ml-3 flex shrink-0 items-center gap-3">
                       <span className="numerals font-mono text-xs font-semibold text-stone-900 sm:text-sm">
-                        {formatKsh(item.price)}
+                        {formatKsh(product.price)}
                       </span>
                       {isSelected ? (
                         <span className="inline-flex items-center gap-1 rounded-md bg-stone-900 px-2 py-0.5 font-mono text-[10px] font-medium text-stone-50 shadow-2xs">
@@ -765,7 +653,10 @@ export default function SearchPalette({ open, onClose }: SearchPaletteProps) {
               <span className="text-[11px] text-stone-500">Select</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded border border-stone-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-stone-600 shadow-2xs">
+              <kbd
+                suppressHydrationWarning
+                className="rounded border border-stone-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-stone-600 shadow-2xs"
+              >
                 {isMac ? "⌘K" : "Ctrl K"}
               </kbd>
               <span className="text-[11px] text-stone-500">Toggle</span>

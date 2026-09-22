@@ -7,6 +7,8 @@ import "@fontsource/lilex";
 import "@fontsource/lekton";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { CartProvider } from "./components/products/cart-store";
+import { WishlistProvider } from "./components/products/wishlist-store";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -44,18 +46,25 @@ export default function RootLayout({
         className="min-h-dvh text-neutral-950 antialiased selection:bg-neutral-950 selection:text-white"
         suppressHydrationWarning
       >
-        {/* Navbar: fixed, renders above everything at z-40. It also owns the
-            skip link and publishes its measured height as --nav-h. */}
-        <Navbar />
-        {/* Main content: full-width, no max-w constraint here — individual sections self-manage their layout */}
-        <div className="relative flex min-h-dvh flex-col">
-          <main id="main-content" tabIndex={-1} className="flex-1 w-full">
-            {children}
-          </main>
-          <div className="page-bounded">
-            <Footer />
-          </div>
-        </div>
+        {/* Basket and saved items wrap the whole tree: the header badge, the
+            product cards and the cart drawer all read the same state. */}
+        <CartProvider>
+          <WishlistProvider>
+            {/* Navbar: fixed, renders above everything at z-40. It also owns the
+                skip link and publishes its measured height as --nav-h. */}
+            <Navbar />
+            {/* Main content: full-width, no max-w constraint here — individual
+                sections self-manage their layout */}
+            <div className="relative flex min-h-dvh flex-col">
+              <main id="main-content" tabIndex={-1} className="w-full flex-1">
+                {children}
+              </main>
+              <div className="page-bounded">
+                <Footer />
+              </div>
+            </div>
+          </WishlistProvider>
+        </CartProvider>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import CartDrawer from "./CartDrawer";
 import { IconTruck } from "./icons";
+import { useCart } from "./products/cart-store";
 import ActionCluster from "./navigation/ActionCluster";
 import BrandLockup from "./navigation/BrandLockup";
 import DepartmentBar from "./navigation/DepartmentBar";
@@ -45,7 +46,9 @@ const Navbar = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [cartCount] = useState(2);
+
+  // The badge reflects the real basket now, not a hardcoded 2.
+  const { count: cartCount } = useCart();
 
   const headerRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
